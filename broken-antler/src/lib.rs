@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use geoutils::Location;
 use indexmap::IndexMap;
 use juriji::{CobbleAll, CreateEvent, EventForInsertion, ReadEvent};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use squalid::_d;
 use uuid::Uuid;
 
@@ -31,7 +31,7 @@ fn to_serde_json_value_without_id<TSerializable: Serialize>(
     value
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Venue {
     pub id: Uuid,
     pub name: String,
@@ -61,9 +61,9 @@ impl CobbleAll for Venue {
     }
 }
 
-fn from_json_str_with_id<'a, TTarget: Deserialize<'a>>(json_str: &str, id: Uuid) -> TTarget {
+fn from_json_str_with_id<TTarget: DeserializeOwned>(json_str: &str, id: Uuid) -> TTarget {
     let mut value: serde_json::Value = serde_json::from_str(json_str).unwrap();
-    let id_value = serde_json::to_value(id);
+    let id_value = serde_json::to_value(id).unwrap();
     value
         .as_object_mut()
         .unwrap()
