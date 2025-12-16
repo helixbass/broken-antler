@@ -5,34 +5,30 @@ use indexmap::IndexMap;
 use juriji::{CobbleAll, EventForInsertion, ReadEvent};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use squalid::_d;
-use strum::{EnumDiscriminants, IntoStaticStr};
 use uuid::Uuid;
 
-#[derive(EnumDiscriminants)]
-#[strum_discriminants(derive(IntoStaticStr))]
-#[strum_discriminants(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum Event {
     InsertVenue(Venue),
 }
 
-#[derive(Default)]
-struct Names;
-impl Names {
-    pub const InsertVenue: &'static str = "INSERT_VENUE";
-}
-
 // TODO: make a new strum-like macro to generate this
 // eg #[variant_names]
-impl Event {
-    pub const Names: Names = Names;
+pub trait EventVariantNames {
+    const INSERT_VENUE: &'static str;
+}
+
+impl EventVariantNames for Event {
+    const INSERT_VENUE: &'static str = "INSERT_VENUE";
 }
 
 impl From<&Event> for EventForInsertion {
     fn from(value: &Event) -> Self {
+        use EventVariantNames;
         match value {
             Event::InsertVenue(venue) => EventForInsertion::new(
                 Some(venue.id),
-                Event::Names::InsertVenue.to_owned(),
+                // Event::NAMES::InsertVenue.to_owned(),
+                Event::INSERT_VENUE.to_owned(),
                 to_serde_json_value_without_id(venue),
             ),
         }
@@ -42,7 +38,7 @@ impl From<&Event> for EventForInsertion {
 impl From<&ReadEvent> for Event {
     fn from(value: &ReadEvent) -> Self {
         match &*value.type_ {
-            Event::Names::InsertVenue => {
+            Event::INSERT_VENUE => {
                 Self::InsertVenue(from_json_str_with_id(&value.payload, value.id.unwrap()))
             }
             type_ => panic!("Unknown event type: {type_}"),
