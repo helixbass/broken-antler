@@ -1866,8 +1866,10 @@ dependencies = [
 name = "shared"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "geoutils",
  "serde",
+ "sqlx",
  "uuid",
 ]
 
@@ -2740,6 +2742,7 @@ dependencies = [
  "serde",
  "serde_json",
  "shared",
+ "sqlx",
  "tokio",
 ]
 

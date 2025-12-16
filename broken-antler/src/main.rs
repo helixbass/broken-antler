@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use sauvignon_axum::{axum, simple_app};
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use tokio::net::TcpListener;
 
 use broken_antler::{get_database, get_schema};
+use shared::get_db_pool;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -19,13 +19,4 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     Ok(())
-}
-
-async fn get_db_pool() -> anyhow::Result<Pool<Postgres>> {
-    let db_pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect("postgres://broken_antler:password@localhost/broken_antler")
-        .await?;
-
-    Ok(db_pool)
 }

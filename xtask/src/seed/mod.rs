@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
 use serde::de::DeserializeOwned;
+use shared::{get_db_pool, Venue};
+use sqlx::{Pool, Postgres};
 use tokio::fs::read_to_string;
 
 fn workspace_root_directory() -> PathBuf {
@@ -24,6 +26,14 @@ async fn parse_json_file<TTarget: DeserializeOwned>(
 }
 
 pub async fn seed() -> anyhow::Result<()> {
-    seed_venues().await?;
+    let db_pool = get_db_pool().await.unwrap();
+    seed_venues(&db_pool).await?;
+    unimplemented!()
+}
+
+async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
+    let venues: Vec<Venue> = parse_json_file("venues").await?;
+    println!("venues: {venues:#?}");
+
     unimplemented!()
 }
