@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use geoutils::Location;
 use indexmap::IndexMap;
-use juriji::{CobbleAll, CreateEvent, EventForInsertion, ReadEvent};
+use juriji::{CobbleAll, EventForInsertion, ReadEvent};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use squalid::_d;
 use uuid::Uuid;
@@ -11,14 +11,25 @@ pub enum Event {
     InsertVenue(Venue),
 }
 
-impl CreateEvent for Event {
-    fn create(&self) -> EventForInsertion {
-        match self {
-            Self::InsertVenue(venue) => EventForInsertion::new(
+impl From<&Event> for EventForInsertion {
+    fn from(value: &Event) -> Self {
+        match value {
+            Event::InsertVenue(venue) => EventForInsertion::new(
                 Some(venue.id),
                 "INSERT_VENUE".to_owned(),
                 to_serde_json_value_without_id(venue),
             ),
+        }
+    }
+}
+
+impl From<&ReadEvent> for Event {
+    fn from(value: &ReadEvent) -> Self {
+        match &*value.type_ {
+            "INSERT_VENUE" => {
+                Self::InsertVenue(from_json_str_with_id(&value.payload, value.id.unwrap()))
+            }
+            type_ => panic!("Unknown event type: {type_}"),
         }
     }
 }
@@ -45,15 +56,11 @@ impl CobbleAll for Venue {
 
     fn cobble(events: &[ReadEvent]) -> Vec<Self> {
         let mut ret: IndexMap<Uuid, Self> = _d();
-        for event in events {
-            match &*event.type_ {
-                "INSERT_VENUE" => {
-                    ret.insert(
-                        event.id.unwrap(),
-                        serde_json::from_str(&event.payload).unwrap(),
-                    );
-                }
-                _ => unreachable!(),
+        for event in events.into_iter().map(|event| Event::from(event)) {
+            match event {
+                Event::InsertVenue(venue) => {
+                    ret.insert(venue.id, venue);
+                } // _ => unreachable!(),
             }
         }
 
