@@ -1,0 +1,22 @@
+[package]
+name = "broken-antler"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = "0.1.89"
+derive_builder = "0.20.2"
+geoutils = { workspace = true }
+indexmap = "2.12.1"
+juriji = { workspace = true }
+sauvignon = { path = "../../sauvignon" }
+sauvignon-axum = { path = "../../sauvignon/sauvignon-axum" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+shared = { path = "../shared" }
+sqlx = { workspace = true }
+squalid = { workspace = true }
+strum = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
