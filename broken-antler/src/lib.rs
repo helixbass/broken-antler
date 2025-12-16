@@ -1,6 +1,7 @@
 use sauvignon::{schema, Schema};
 
 mod database;
+mod sauvignon;
 mod types;
 
 pub use database::{get_database, Database, DatabaseCobbler, Event, VenuesCobbler};
