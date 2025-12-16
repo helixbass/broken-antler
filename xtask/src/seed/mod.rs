@@ -14,7 +14,11 @@ pub async fn seed() -> anyhow::Result<()> {
 }
 
 async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
-    let venues: Vec<Venue> = parse_json_file("venues").await?;
+    let venues: Vec<Venue> = parse_json_file::<Vec<VenueJson>>("venues")
+        .await?
+        .into_iter()
+        .map(Into::into)
+        .collect();
     println!("venues: {venues:#?}");
 
     for event in venues
