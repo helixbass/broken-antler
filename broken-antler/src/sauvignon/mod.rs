@@ -1,22 +1,25 @@
-use sauvignon::{DependencyType, DependencyValue};
+use async_trait::async_trait;
+use sauvignon::{DependencyType, DependencyValue, WhereResolved};
 use uuid::Uuid;
 
 use crate::{Database, Venue};
 
+#[async_trait]
 impl sauvignon::Database for Database {
-    type Id = Uuid;
-
     async fn get_column(
         &self,
         table_name: &str,
         column_name: &str,
-        id: &Uuid,
+        id: &str,
+        id_column_name: &str,
         dependency_type: DependencyType,
     ) -> DependencyValue {
+        assert_eq!(id_column_name, "id");
+        let id = Uuid::parse_str(id).unwrap();
         match table_name {
             "venues" => self
                 .venues
-                .get(id)
+                .get(&id)
                 .unwrap()
                 .get_column(column_name, dependency_type),
             table_name => panic!("Unknown table name {table_name}"),
@@ -28,7 +31,11 @@ impl sauvignon::Database for Database {
         table_name: &str,
         column_name: &str,
         dependency_type: DependencyType,
+        wheres: &[WhereResolved],
     ) -> Vec<DependencyValue> {
+        if !wheres.is_empty() {
+            unimplemented!()
+        }
         match table_name {
             "venues" => self
                 .venues
@@ -40,7 +47,11 @@ impl sauvignon::Database for Database {
     }
 }
 
-impl sauvignon::Row for Venue {
+trait Row {
+    fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue;
+}
+
+impl Row for Venue {
     fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
         match column_name {
             "name" => {

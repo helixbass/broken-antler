@@ -1,4 +1,4 @@
-use sauvignon::{schema, Schema};
+use ::sauvignon::{schema, Schema};
 
 mod database;
 mod sauvignon;
