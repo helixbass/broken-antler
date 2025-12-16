@@ -13,21 +13,15 @@ pub enum Event {
 
 // TODO: make a new strum-like macro to generate this
 // eg #[variant_names]
-pub trait EventVariantNames {
-    const INSERT_VENUE: &'static str;
-}
-
-impl EventVariantNames for Event {
+impl Event {
     const INSERT_VENUE: &'static str = "INSERT_VENUE";
 }
 
 impl From<&Event> for EventForInsertion {
     fn from(value: &Event) -> Self {
-        use EventVariantNames;
         match value {
             Event::InsertVenue(venue) => EventForInsertion::new(
                 Some(venue.id),
-                // Event::NAMES::InsertVenue.to_owned(),
                 Event::INSERT_VENUE.to_owned(),
                 to_serde_json_value_without_id(venue),
             ),
@@ -63,7 +57,7 @@ pub struct Venue {
 
 impl CobbleAll for Venue {
     fn relevant_event_types(&self) -> HashSet<String> {
-        ["INSERT_VENUE".to_owned()].into_iter().collect()
+        [Event::INSERT_VENUE.to_owned()].into_iter().collect()
     }
 
     fn cobble(events: &[ReadEvent]) -> Vec<Self> {
