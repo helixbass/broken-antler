@@ -1,9 +1,7 @@
 use derive_builder::Builder;
 use indexmap::IndexMap;
-use juriji::{
-    from_json_str_with_id, read_events, to_serde_json_value_without_id, EventForInsertion,
-    ReadEvent,
-};
+use juriji::read_events;
+use shared::Event;
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
