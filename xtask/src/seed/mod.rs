@@ -1,4 +1,5 @@
-use shared::{get_db_pool, Venue};
+use juriji::{insert_event, EventForInsertion};
+use shared::{get_db_pool, get_mutex_guard, Event, Venue};
 use sqlx::{Pool, Postgres};
 
 use crate::parse_json_file;
@@ -13,5 +14,13 @@ async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
     let venues: Vec<Venue> = parse_json_file("venues").await?;
     println!("venues: {venues:#?}");
 
-    unimplemented!()
+    for event in venues
+        .into_iter()
+        .map(|venue| Event::InsertVenue(venue))
+        .map(|event| EventForInsertion::from(&event))
+    {
+        insert_event(event, get_mutex_guard().await, db_pool).await;
+    }
+
+    Ok(())
 }

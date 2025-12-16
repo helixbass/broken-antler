@@ -3,8 +3,8 @@ use ::sauvignon::{schema, Schema};
 mod database;
 mod sauvignon;
 
-pub use database::{get_database, Database, DatabaseCobbler, Event, VenuesCobbler};
-pub use shared::Venue;
+pub use database::{get_database, Database, DatabaseCobbler, VenuesCobbler};
+pub use shared::{Event, Venue};
 
 pub fn get_schema() -> Schema {
     schema! {

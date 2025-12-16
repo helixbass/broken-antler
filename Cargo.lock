@@ -1868,8 +1868,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "geoutils",
+ "juriji",
  "serde",
  "sqlx",
+ "tokio",
  "uuid",
 ]
 
@@ -2739,6 +2741,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "juriji",
  "serde",
  "serde_json",
  "shared",
