@@ -24,5 +24,6 @@ async fn parse_json_file<TTarget: DeserializeOwned>(
 }
 
 pub async fn seed() -> anyhow::Result<()> {
+    seed_venues().await?;
     unimplemented!()
 }
