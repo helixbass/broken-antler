@@ -1,6 +1,9 @@
+use geoutils::Location;
 use juriji::{insert_event, EventForInsertion};
+use serde::Deserialize;
 use shared::{get_db_pool, get_mutex_guard, Event, Venue};
 use sqlx::{Pool, Postgres};
+use uuid::Uuid;
 
 use crate::parse_json_file;
 
@@ -23,4 +26,22 @@ async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+#[derive(Deserialize)]
+struct VenueJson {
+    pub id: Uuid,
+    pub name: String,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+impl From<VenueJson> for Venue {
+    fn from(value: VenueJson) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            location: Location::new(value.latitude, value.longitude),
+        }
+    }
 }

@@ -2741,6 +2741,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "geoutils",
  "juriji",
  "serde",
  "serde_json",
