@@ -59,7 +59,10 @@ impl Row for Venue {
                 DependencyValue::String(self.name.clone())
             }
             "id" => {
-                assert_eq!(dependency_type, DependencyType::Id);
+                assert!(matches!(
+                    dependency_type,
+                    DependencyType::Id | DependencyType::ListOfIds
+                ));
                 DependencyValue::Id(self.id.to_string())
             }
             _ => panic!("Unknown column: {column_name}"),
