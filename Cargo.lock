@@ -119,6 +119,7 @@ dependencies = [
  "juriji",
  "serde",
  "serde_json",
+ "sqlx",
  "squalid",
  "strum",
  "uuid",

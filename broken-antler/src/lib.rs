@@ -1,8 +1,12 @@
 use derive_builder::Builder;
 use geoutils::Location;
 use indexmap::IndexMap;
-use juriji::{from_json_str_with_id, to_serde_json_value_without_id, EventForInsertion, ReadEvent};
+use juriji::{
+    from_json_str_with_id, read_events, to_serde_json_value_without_id, EventForInsertion,
+    ReadEvent,
+};
 use serde::{Deserialize, Serialize};
+use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
 pub enum Event {
@@ -72,6 +76,7 @@ pub struct Database {
     pub venues: IndexMap<Uuid, Venue>,
 }
 
+#[derive(Default)]
 pub struct DatabaseCobbler {
     pub venues: VenuesCobbler,
 }
@@ -89,4 +94,16 @@ impl From<DatabaseCobbler> for Database {
             .build()
             .unwrap()
     }
+}
+
+pub async fn get_database(db_pool: &Pool<Postgres>) -> Database {
+    let mut cobbler = DatabaseCobbler::default();
+    read_events(None, db_pool)
+        .await
+        .into_iter()
+        .map(|event| Event::from(&event))
+        .for_each(|event| {
+            cobbler.accept_next(&event);
+        });
+    cobbler.into()
 }
