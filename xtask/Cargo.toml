@@ -11,3 +11,4 @@ serde_json = { workspace = true }
 shared = { path = "../shared" }
 sqlx = { workspace = true }
 tokio = { workspace = true, features = [ "fs" ] }
+uuid = { workspace = true }
