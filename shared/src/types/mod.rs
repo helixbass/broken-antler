@@ -6,5 +6,5 @@ use uuid::Uuid;
 pub struct Venue {
     pub id: Uuid,
     pub name: String,
-    pub location: Location,
+    pub location: Option<Location>,
 }

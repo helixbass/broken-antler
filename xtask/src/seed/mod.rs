@@ -36,8 +36,8 @@ async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
 struct VenueJson {
     pub id: Uuid,
     pub name: String,
-    pub latitude: f64,
-    pub longitude: f64,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
 }
 
 impl From<VenueJson> for Venue {
@@ -45,7 +45,11 @@ impl From<VenueJson> for Venue {
         Self {
             id: value.id,
             name: value.name,
-            location: Location::new(value.latitude, value.longitude),
+            location: match (value.latitude, value.longitude) {
+                (Some(latitude), Some(longitude)) => Some(Location::new(latitude, longitude)),
+                (None, None) => None,
+                _ => unreachable!(),
+            },
         }
     }
 }
