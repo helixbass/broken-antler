@@ -1,10 +1,8 @@
-use std::collections::HashSet;
-
+use derive_builder::Builder;
 use geoutils::Location;
 use indexmap::IndexMap;
-use juriji::{CobbleAll, EventForInsertion, ReadEvent};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use squalid::_d;
+use juriji::{from_json_str_with_id, to_serde_json_value_without_id, EventForInsertion, ReadEvent};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub enum Event {
@@ -40,46 +38,55 @@ impl From<&ReadEvent> for Event {
     }
 }
 
-fn to_serde_json_value_without_id<TSerializable: Serialize>(
-    value: &TSerializable,
-) -> serde_json::Value {
-    let mut value = serde_json::to_value(value).unwrap();
-    let _ = value.as_object_mut().unwrap().remove("id").unwrap();
-    value
-}
-
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Venue {
     pub id: Uuid,
     pub name: String,
     pub location: Location,
 }
 
-impl CobbleAll for Venue {
-    fn relevant_event_types(&self) -> HashSet<String> {
-        [Event::INSERT_VENUE.to_owned()].into_iter().collect()
-    }
+#[derive(Default)]
+pub struct VenuesCobbler {
+    pub assembling: IndexMap<Uuid, Venue>,
+}
 
-    fn cobble(events: &[ReadEvent]) -> Vec<Self> {
-        let mut ret: IndexMap<Uuid, Self> = _d();
-        for event in events.into_iter().map(|event| Event::from(event)) {
-            match event {
-                Event::InsertVenue(venue) => {
-                    ret.insert(venue.id, venue);
-                } // _ => unreachable!(),
-            }
+impl VenuesCobbler {
+    pub fn accept_next(&mut self, event: &Event) {
+        match event {
+            Event::InsertVenue(venue) => {
+                self.assembling.insert(venue.id, venue.clone());
+            } // _ => unreachable!(),
         }
-
-        ret.into_values().collect()
     }
 }
 
-fn from_json_str_with_id<TTarget: DeserializeOwned>(json_str: &str, id: Uuid) -> TTarget {
-    let mut value: serde_json::Value = serde_json::from_str(json_str).unwrap();
-    let id_value = serde_json::to_value(id).unwrap();
-    value
-        .as_object_mut()
-        .unwrap()
-        .insert("id".to_owned(), id_value);
-    serde_json::from_value(value).unwrap()
+impl From<VenuesCobbler> for IndexMap<Uuid, Venue> {
+    fn from(value: VenuesCobbler) -> Self {
+        value.assembling
+    }
+}
+
+#[derive(Builder)]
+pub struct Database {
+    #[builder(setter(into))]
+    pub venues: IndexMap<Uuid, Venue>,
+}
+
+pub struct DatabaseCobbler {
+    pub venues: VenuesCobbler,
+}
+
+impl DatabaseCobbler {
+    pub fn accept_next(&mut self, event: &Event) {
+        self.venues.accept_next(event);
+    }
+}
+
+impl From<DatabaseCobbler> for Database {
+    fn from(value: DatabaseCobbler) -> Self {
+        DatabaseBuilder::default()
+            .venues(value.venues)
+            .build()
+            .unwrap()
+    }
 }
