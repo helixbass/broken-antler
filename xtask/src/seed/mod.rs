@@ -1,14 +1,18 @@
+use std::path::PathBuf;
+
 use geoutils::Location;
 use juriji::{insert_event, EventForInsertion};
 use serde::Deserialize;
 use shared::{get_db_pool, get_mutex_guard, Event, Venue};
 use sqlx::{Pool, Postgres};
+use tokio::fs::read_to_string;
 use uuid::Uuid;
 
-use crate::parse_json_file;
+use crate::{parse_json_file, workspace_root_directory};
 
 pub async fn seed() -> anyhow::Result<()> {
     let db_pool = get_db_pool().await.unwrap();
+    create_tables(&db_pool).await?;
     seed_venues(&db_pool).await?;
     unimplemented!()
 }
@@ -52,4 +56,18 @@ impl From<VenueJson> for Venue {
             },
         }
     }
+}
+
+fn sql_file_path(file_name_root: &str) -> PathBuf {
+    let mut path = workspace_root_directory();
+    path.push(&format!("sql/{file_name_root}.sql"));
+    path
+}
+
+async fn create_tables(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
+    let sql = read_to_string(sql_file_path("create_tables")).await?;
+    for command in sql.split("\n\n") {
+        sqlx::query(command).execute(db_pool).await?;
+    }
+    Ok(())
 }
