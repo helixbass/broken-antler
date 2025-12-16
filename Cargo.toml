@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "broken-antler",
+  "shared",
   "xtask",
 ]
 resolver = "3"
