@@ -3,6 +3,7 @@ use indexmap::IndexMap;
 use juriji::read_events;
 use shared::Event;
 use sqlx::{Pool, Postgres};
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{Show, Song, Venue};
@@ -13,6 +14,7 @@ pub struct VenuesCobbler {
 }
 
 impl VenuesCobbler {
+    #[instrument(level = "trace", skip(self))]
     pub fn accept_next(&mut self, event: &Event) {
         match event {
             Event::InsertVenue(venue) => {
@@ -35,6 +37,7 @@ pub struct SongsCobbler {
 }
 
 impl SongsCobbler {
+    #[instrument(level = "trace", skip(self))]
     pub fn accept_next(&mut self, event: &Event) {
         match event {
             Event::InsertSong(song) => {
@@ -57,6 +60,7 @@ pub struct ShowsCobbler {
 }
 
 impl ShowsCobbler {
+    #[instrument(level = "trace", skip(self))]
     pub fn accept_next(&mut self, event: &Event) {
         match event {
             Event::InsertShow(show) => {
@@ -91,6 +95,7 @@ pub struct DatabaseCobbler {
 }
 
 impl DatabaseCobbler {
+    #[instrument(level = "trace", skip(self))]
     pub fn accept_next(&mut self, event: &Event) {
         self.venues.accept_next(event);
         self.songs.accept_next(event);
@@ -109,6 +114,7 @@ impl From<DatabaseCobbler> for Database {
     }
 }
 
+#[instrument(level = "trace", skip(db_pool))]
 pub async fn get_database(db_pool: &Pool<Postgres>) -> Database {
     let mut cobbler = DatabaseCobbler::default();
     read_events(None, db_pool)

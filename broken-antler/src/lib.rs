@@ -1,4 +1,5 @@
 use ::sauvignon::{schema, Schema};
+use tracing::instrument;
 
 mod database;
 mod sauvignon;
@@ -6,6 +7,7 @@ mod sauvignon;
 pub use database::{get_database, Database, DatabaseCobbler, VenuesCobbler};
 pub use shared::{Event, Show, Song, Venue};
 
+#[instrument(level = "trace")]
 pub fn get_schema() -> Schema {
     schema! {
         types => [

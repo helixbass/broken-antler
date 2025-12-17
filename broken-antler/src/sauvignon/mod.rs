@@ -1,11 +1,13 @@
 use async_trait::async_trait;
 use sauvignon::{DependencyType, DependencyValue, WhereResolved};
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::{Database, Show, Song, Venue};
 
 #[async_trait]
 impl sauvignon::Database for Database {
+    #[instrument(level = "trace", skip(self))]
     async fn get_column(
         &self,
         table_name: &str,
@@ -36,6 +38,7 @@ impl sauvignon::Database for Database {
         }
     }
 
+    #[instrument(level = "trace", skip(self))]
     async fn get_column_list(
         &self,
         table_name: &str,
@@ -72,6 +75,7 @@ trait Row {
 }
 
 impl Row for Venue {
+    #[instrument(level = "trace", skip(self))]
     fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
         match column_name {
             "name" => {
@@ -91,6 +95,7 @@ impl Row for Venue {
 }
 
 impl Row for Song {
+    #[instrument(level = "trace", skip(self))]
     fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
         match column_name {
             "title" => {
@@ -110,6 +115,7 @@ impl Row for Song {
 }
 
 impl Row for Show {
+    #[instrument(level = "trace", skip(self))]
     fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
         match column_name {
             "date" => {
@@ -140,6 +146,7 @@ trait MatchWheres {
 }
 
 impl MatchWheres for Venue {
+    #[instrument(level = "trace", skip(self))]
     fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool {
         for _where in wheres {
             unimplemented!()
@@ -149,6 +156,7 @@ impl MatchWheres for Venue {
 }
 
 impl MatchWheres for Song {
+    #[instrument(level = "trace", skip(self))]
     fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool {
         for _where in wheres {
             unimplemented!()
@@ -158,6 +166,7 @@ impl MatchWheres for Song {
 }
 
 impl MatchWheres for Show {
+    #[instrument(level = "trace", skip(self))]
     fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool {
         for where_ in wheres {
             match &*where_.column_name {

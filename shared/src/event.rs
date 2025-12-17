@@ -2,6 +2,7 @@ use juriji::{from_json_str_with_id, to_serde_json_value_without_id, EventForInse
 
 use crate::{Show, Song, Venue};
 
+#[derive(Debug)]
 pub enum Event {
     InsertVenue(Venue),
     InsertSong(Song),
