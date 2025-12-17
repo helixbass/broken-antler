@@ -5,7 +5,7 @@ use shared::Event;
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
-use crate::{Song, Venue};
+use crate::{Show, Song, Venue};
 
 #[derive(Default)]
 pub struct VenuesCobbler {
@@ -51,24 +51,50 @@ impl From<SongsCobbler> for IndexMap<Uuid, Song> {
     }
 }
 
+#[derive(Default)]
+pub struct ShowsCobbler {
+    pub assembling: IndexMap<Uuid, Show>,
+}
+
+impl ShowsCobbler {
+    pub fn accept_next(&mut self, event: &Event) {
+        match event {
+            Event::InsertShow(show) => {
+                self.assembling.insert(show.id, show.clone());
+            }
+            _ => {}
+        }
+    }
+}
+
+impl From<ShowsCobbler> for IndexMap<Uuid, Show> {
+    fn from(value: ShowsCobbler) -> Self {
+        value.assembling
+    }
+}
+
 #[derive(Builder)]
 pub struct Database {
     #[builder(setter(into))]
     pub venues: IndexMap<Uuid, Venue>,
     #[builder(setter(into))]
     pub songs: IndexMap<Uuid, Song>,
+    #[builder(setter(into))]
+    pub shows: IndexMap<Uuid, Show>,
 }
 
 #[derive(Default)]
 pub struct DatabaseCobbler {
     pub venues: VenuesCobbler,
     pub songs: SongsCobbler,
+    pub shows: ShowsCobbler,
 }
 
 impl DatabaseCobbler {
     pub fn accept_next(&mut self, event: &Event) {
         self.venues.accept_next(event);
         self.songs.accept_next(event);
+        self.shows.accept_next(event);
     }
 }
 
@@ -77,6 +103,7 @@ impl From<DatabaseCobbler> for Database {
         DatabaseBuilder::default()
             .venues(value.venues)
             .songs(value.songs)
+            .shows(value.shows)
             .build()
             .unwrap()
     }

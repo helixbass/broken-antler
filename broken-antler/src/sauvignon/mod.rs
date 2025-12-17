@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sauvignon::{DependencyType, DependencyValue, WhereResolved};
 use uuid::Uuid;
 
-use crate::{Database, Song, Venue};
+use crate::{Database, Show, Song, Venue};
 
 #[async_trait]
 impl sauvignon::Database for Database {
@@ -24,6 +24,11 @@ impl sauvignon::Database for Database {
                 .get_column(column_name, dependency_type),
             "songs" => self
                 .songs
+                .get(&id)
+                .unwrap()
+                .get_column(column_name, dependency_type),
+            "shows" => self
+                .shows
                 .get(&id)
                 .unwrap()
                 .get_column(column_name, dependency_type),
@@ -51,6 +56,11 @@ impl sauvignon::Database for Database {
                 .songs
                 .values()
                 .map(|song| song.get_column(column_name, dependency_type))
+                .collect(),
+            "shows" => self
+                .shows
+                .values()
+                .map(|show| show.get_column(column_name, dependency_type))
                 .collect(),
             table_name => panic!("Unknown table name {table_name}"),
         }
@@ -93,6 +103,32 @@ impl Row for Song {
                     DependencyType::Id | DependencyType::ListOfIds
                 ));
                 DependencyValue::Id(self.id.to_string())
+            }
+            _ => panic!("Unknown column: {column_name}"),
+        }
+    }
+}
+
+impl Row for Show {
+    fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
+        match column_name {
+            "date" => {
+                assert_eq!(dependency_type, DependencyType::Date);
+                DependencyValue::Date(self.date.clone())
+            }
+            "id" => {
+                assert!(matches!(
+                    dependency_type,
+                    DependencyType::Id | DependencyType::ListOfIds
+                ));
+                DependencyValue::Id(self.id.to_string())
+            }
+            "venue_id" => {
+                assert!(matches!(
+                    dependency_type,
+                    DependencyType::Id | DependencyType::ListOfIds
+                ));
+                DependencyValue::Id(self.venue_id.to_string())
             }
             _ => panic!("Unknown column: {column_name}"),
         }
