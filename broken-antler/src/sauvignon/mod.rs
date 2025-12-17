@@ -43,23 +43,23 @@ impl sauvignon::Database for Database {
         dependency_type: DependencyType,
         wheres: &[WhereResolved],
     ) -> Vec<DependencyValue> {
-        if !wheres.is_empty() {
-            unimplemented!()
-        }
         match table_name {
             "venues" => self
                 .venues
                 .values()
+                .filter(|venue| venue.matches_wheres(wheres))
                 .map(|venue| venue.get_column(column_name, dependency_type))
                 .collect(),
             "songs" => self
                 .songs
                 .values()
+                .filter(|song| song.matches_wheres(wheres))
                 .map(|song| song.get_column(column_name, dependency_type))
                 .collect(),
             "shows" => self
                 .shows
                 .values()
+                .filter(|show| show.matches_wheres(wheres))
                 .map(|show| show.get_column(column_name, dependency_type))
                 .collect(),
             table_name => panic!("Unknown table name {table_name}"),
@@ -132,5 +132,44 @@ impl Row for Show {
             }
             _ => panic!("Unknown column: {column_name}"),
         }
+    }
+}
+
+trait MatchWheres {
+    fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool;
+}
+
+impl MatchWheres for Venue {
+    fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool {
+        for _where in wheres {
+            unimplemented!()
+        }
+        true
+    }
+}
+
+impl MatchWheres for Song {
+    fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool {
+        for _where in wheres {
+            unimplemented!()
+        }
+        true
+    }
+}
+
+impl MatchWheres for Show {
+    fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool {
+        for where_ in wheres {
+            match &*where_.column_name {
+                "venue_id" => {
+                    assert!(matches!(where_.value, DependencyValue::Id(_)));
+                    if where_.value.as_id() != &self.venue_id.to_string() {
+                        return false;
+                    }
+                }
+                _ => unimplemented!(),
+            }
+        }
+        true
     }
 }

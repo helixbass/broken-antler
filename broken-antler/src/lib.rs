@@ -13,6 +13,10 @@ pub fn get_schema() -> Schema {
                 fields => [
                     id => id_column()
                     name => string_column()
+                    shows => has_many(
+                        type => Show
+                        foreign_key => venue_id
+                    )
                 ]
             }
             Song => {
