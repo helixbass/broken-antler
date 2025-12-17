@@ -54,6 +54,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[derive(Clone)]
 struct RestartTraceLayer {
     pub sender: Sender<()>,
 }
@@ -69,6 +70,7 @@ impl<TNested> Layer<TNested> for RestartTraceLayer {
     }
 }
 
+#[derive(Clone)]
 struct RestartTraceService<TNested> {
     pub sender: Sender<()>,
     pub service: TNested,
