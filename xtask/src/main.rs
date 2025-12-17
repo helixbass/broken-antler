@@ -8,7 +8,9 @@ mod shared;
 use add_ids::add_ids;
 use concatenate_jsons::concatenate_jsons;
 use seed::seed;
-pub use shared::{json_seed_file_path, parse_json_file, workspace_root_directory};
+pub use shared::{
+    json_seed_file_directory, json_seed_file_path, parse_json_file, workspace_root_directory,
+};
 
 #[derive(Parser)]
 struct Args {
