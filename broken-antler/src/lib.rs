@@ -4,7 +4,7 @@ mod database;
 mod sauvignon;
 
 pub use database::{get_database, Database, DatabaseCobbler, VenuesCobbler};
-pub use shared::{Event, Song, Venue};
+pub use shared::{Event, Show, Song, Venue};
 
 pub fn get_schema() -> Schema {
     schema! {
@@ -21,6 +21,15 @@ pub fn get_schema() -> Schema {
                     title => string_column()
                 ]
             }
+            Show => {
+                fields => [
+                    id => id_column()
+                    date => date_column()
+                    venue => belongs_to(
+                        type => Venue
+                    )
+                ]
+            }
         ]
         query => [
             venues => {
@@ -31,6 +40,12 @@ pub fn get_schema() -> Schema {
             }
             songs => {
                 type => [Song!]!
+                internal_dependencies => [
+                    ids => id_column_list()
+                ]
+            }
+            shows => {
+                type => [Show!]!
                 internal_dependencies => [
                     ids => id_column_list()
                 ]
