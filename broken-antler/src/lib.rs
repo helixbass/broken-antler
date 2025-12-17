@@ -18,7 +18,7 @@ pub fn get_schema() -> Schema {
             Song => {
                 fields => [
                     id => id_column()
-                    name => string_column()
+                    title => string_column()
                 ]
             }
         ]

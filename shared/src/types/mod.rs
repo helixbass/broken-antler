@@ -12,5 +12,5 @@ pub struct Venue {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Song {
     pub id: Uuid,
-    pub name: String,
+    pub title: String,
 }
