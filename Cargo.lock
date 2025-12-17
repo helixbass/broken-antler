@@ -2896,6 +2896,7 @@ dependencies = [
  "chrono",
  "clap",
  "geoutils",
+ "itertools 0.14.0",
  "juriji",
  "regex",
  "serde",
