@@ -33,9 +33,10 @@ async fn main() -> anyhow::Result<()> {
 
     axum::serve(
         TcpListener::bind("0.0.0.0:3002").await?,
-        simple_app(Arc::new(schema), Arc::new(database)), // .layer(RestartTraceLayer {
-                                                          //     sender: trace_restarter_sender,
-                                                          // }),
+        simple_app(Arc::new(schema), Arc::new(database)),
+        // .layer(RestartTraceLayer {
+        //     sender: trace_restarter_sender,
+        // }),
     )
     .await?;
 
