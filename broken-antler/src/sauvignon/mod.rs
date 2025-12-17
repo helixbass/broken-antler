@@ -165,7 +165,9 @@ impl MatchWheres for Song {
 }
 
 impl MatchWheres for Show {
-    #[instrument(level = "trace", skip(self, wheres))]
+    // TODO: in samply profiling this tracing (I believe) looked
+    // like it was actually costing a fair amount?
+    // #[instrument(level = "trace", skip(self))]
     fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool {
         for where_ in wheres {
             match &*where_.column_name {
