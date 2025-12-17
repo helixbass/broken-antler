@@ -8,8 +8,12 @@ pub async fn concatenate_jsons(file_name_root: &str) -> anyhow::Result<()> {
     let regex = Regex::new(&format!(r#"^{file_name_root}-\d+\.json"#)).unwrap();
     let mut concatenated = serde_json::Value::Array(vec![]);
     while let Some(dir_entry) = all_json_file_paths.next_entry().await.unwrap() {
-        if regex.is_match(&dir_entry.file_name().into_string().unwrap()) {
-            let one_file_json: serde_json::Value = parse_json_file(file_name_root).await.unwrap();
+        let file_name_str = dir_entry.file_name().into_string().unwrap();
+        if regex.is_match(&file_name_str) {
+            let one_file_json: serde_json::Value =
+                parse_json_file(&file_name_str.split(".").next().unwrap())
+                    .await
+                    .unwrap();
             concatenated
                 .as_array_mut()
                 .unwrap()
