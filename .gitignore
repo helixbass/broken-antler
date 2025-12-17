@@ -1,4 +1,4 @@
 /target
 
 trace-*.json
-profile.json.gz
+profile*.json.gz

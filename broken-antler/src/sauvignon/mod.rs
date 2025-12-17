@@ -1,7 +1,6 @@
 use async_trait::async_trait;
-use sauvignon::{DependencyType, DependencyValue, WhereResolved};
+use sauvignon::{DependencyType, DependencyValue, Id, WhereResolved};
 use tracing::instrument;
-use uuid::Uuid;
 
 use crate::{Database, Show, Song, Venue};
 
@@ -12,26 +11,26 @@ impl sauvignon::Database for Database {
         &self,
         table_name: &str,
         column_name: &str,
-        id: &str,
+        id: &Id,
         id_column_name: &str,
         dependency_type: DependencyType,
     ) -> DependencyValue {
         assert_eq!(id_column_name, "id");
-        let id = Uuid::parse_str(id).unwrap();
+        let id = id.as_uuid();
         match table_name {
             "venues" => self
                 .venues
-                .get(&id)
+                .get(id)
                 .unwrap()
                 .get_column(column_name, dependency_type),
             "songs" => self
                 .songs
-                .get(&id)
+                .get(id)
                 .unwrap()
                 .get_column(column_name, dependency_type),
             "shows" => self
                 .shows
-                .get(&id)
+                .get(id)
                 .unwrap()
                 .get_column(column_name, dependency_type),
             table_name => panic!("Unknown table name {table_name}"),
@@ -87,7 +86,7 @@ impl Row for Venue {
                     dependency_type,
                     DependencyType::Id | DependencyType::ListOfIds
                 ));
-                DependencyValue::Id(self.id.to_string())
+                DependencyValue::Id(Id::Uuid(self.id))
             }
             _ => panic!("Unknown column: {column_name}"),
         }
@@ -107,7 +106,7 @@ impl Row for Song {
                     dependency_type,
                     DependencyType::Id | DependencyType::ListOfIds
                 ));
-                DependencyValue::Id(self.id.to_string())
+                DependencyValue::Id(Id::Uuid(self.id))
             }
             _ => panic!("Unknown column: {column_name}"),
         }
@@ -127,14 +126,14 @@ impl Row for Show {
                     dependency_type,
                     DependencyType::Id | DependencyType::ListOfIds
                 ));
-                DependencyValue::Id(self.id.to_string())
+                DependencyValue::Id(Id::Uuid(self.id))
             }
             "venue_id" => {
                 assert!(matches!(
                     dependency_type,
                     DependencyType::Id | DependencyType::ListOfIds
                 ));
-                DependencyValue::Id(self.venue_id.to_string())
+                DependencyValue::Id(Id::Uuid(self.venue_id))
             }
             _ => panic!("Unknown column: {column_name}"),
         }
@@ -166,13 +165,12 @@ impl MatchWheres for Song {
 }
 
 impl MatchWheres for Show {
-    #[instrument(level = "trace", skip(self))]
+    #[instrument(level = "trace", skip(self, wheres))]
     fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool {
         for where_ in wheres {
             match &*where_.column_name {
                 "venue_id" => {
-                    assert!(matches!(where_.value, DependencyValue::Id(_)));
-                    if where_.value.as_id() != &self.venue_id.to_string() {
+                    if where_.value.as_id().as_uuid() != &self.venue_id {
                         return false;
                     }
                 }
