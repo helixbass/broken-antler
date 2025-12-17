@@ -1106,6 +1106,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "squalid 0.0.1-dev.0 (git+https://github.com/helixbass/squalid?rev=aeb2045)",
  "tokio",
  "uuid",
 ]
@@ -2161,6 +2162,14 @@ dependencies = [
 name = "squalid"
 version = "0.0.1-dev.0"
 source = "git+https://github.com/helixbass/squalid?rev=646f6bf#646f6bf00a40ea3d1fce6eac541194b2c87b4d6d"
+dependencies = [
+ "itertools 0.11.0",
+]
+
+[[package]]
+name = "squalid"
+version = "0.0.1-dev.0"
+source = "git+https://github.com/helixbass/squalid?rev=aeb2045#aeb20458494a36d390192a8d89a086370527a8c1"
 dependencies = [
  "itertools 0.11.0",
 ]

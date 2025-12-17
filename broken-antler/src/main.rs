@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
     let database = get_database(&db_pool).await;
 
     axum::serve(
-        TcpListener::bind("0.0.0.0:3001").await?,
+        TcpListener::bind("0.0.0.0:3002").await?,
         simple_app(Arc::new(schema), Arc::new(database)),
     )
     .await?;

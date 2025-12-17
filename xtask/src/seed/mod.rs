@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use geoutils::Location;
-use juriji::{insert_event, EventForInsertion};
+use juriji::{insert_events, EventForInsertion};
 use serde::Deserialize;
 use shared::{get_db_pool, get_mutex_guard, Event, Venue};
 use sqlx::{Pool, Postgres};
@@ -25,13 +25,15 @@ async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
         .collect();
     println!("venues: {venues:#?}");
 
-    for event in venues
-        .into_iter()
-        .map(|venue| Event::InsertVenue(venue))
-        .map(|event| EventForInsertion::from(&event))
-    {
-        insert_event(event, get_mutex_guard().await, db_pool).await;
-    }
+    insert_events(
+        venues
+            .into_iter()
+            .map(|venue| Event::InsertVenue(venue))
+            .map(|event| EventForInsertion::from(&event)),
+        get_mutex_guard().await,
+        db_pool,
+    )
+    .await;
 
     Ok(())
 }
