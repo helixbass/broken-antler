@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use geoutils::Location;
 use juriji::{insert_events, EventForInsertion};
 use serde::Deserialize;
-use shared::{get_db_pool, get_mutex_guard, Event, Venue};
+use shared::{get_db_pool, get_mutex_guard, Event, Song, Venue};
 use sqlx::{Pool, Postgres};
 use tokio::fs::read_to_string;
 use uuid::Uuid;
@@ -14,6 +14,7 @@ pub async fn seed() -> anyhow::Result<()> {
     let db_pool = get_db_pool().await.unwrap();
     create_tables(&db_pool).await?;
     seed_venues(&db_pool).await?;
+    seed_songs(&db_pool).await?;
     unimplemented!()
 }
 
@@ -58,6 +59,27 @@ impl From<VenueJson> for Venue {
             },
         }
     }
+}
+
+async fn seed_songs(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
+    let songs: Vec<Song> = parse_json_file::<Vec<Song>>("songs")
+        .await?
+        .into_iter()
+        .map(Into::into)
+        .collect();
+    println!("songs: {songs:#?}");
+
+    insert_events(
+        songs
+            .into_iter()
+            .map(|song| Event::InsertSong(song))
+            .map(|event| EventForInsertion::from(&event)),
+        get_mutex_guard().await,
+        db_pool,
+    )
+    .await;
+
+    Ok(())
 }
 
 fn sql_file_path(file_name_root: &str) -> PathBuf {

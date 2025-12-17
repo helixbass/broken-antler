@@ -8,3 +8,9 @@ pub struct Venue {
     pub name: String,
     pub location: Option<Location>,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Song {
+    pub id: Uuid,
+    pub name: String,
+}
