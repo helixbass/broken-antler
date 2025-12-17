@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use geoutils::Location;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -13,4 +14,11 @@ pub struct Venue {
 pub struct Song {
     pub id: Uuid,
     pub title: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Show {
+    pub id: Uuid,
+    pub date: NaiveDate,
+    pub venue_id: Uuid,
 }

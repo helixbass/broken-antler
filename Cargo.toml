@@ -8,6 +8,7 @@ resolver = "3"
 
 [workspace.dependencies]
 anyhow = "1.0.100"
+chrono = { version = "0.4.42", features = [ "serde" ] }
 geoutils = { version = "0.5.1", features = [ "serde" ] }
 juriji = { path = "../juriji" }
 serde = { version = "1.0.228", features = ["derive"] }

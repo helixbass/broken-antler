@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
+chrono = { workspace = true }
 geoutils = { workspace = true }
 juriji = { workspace = true }
 serde = { workspace = true }

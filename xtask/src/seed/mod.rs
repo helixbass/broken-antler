@@ -1,9 +1,11 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 
+use chrono::NaiveDate;
 use geoutils::Location;
 use juriji::{insert_events, EventForInsertion};
 use serde::Deserialize;
-use shared::{get_db_pool, get_mutex_guard, Event, Song, Venue};
+use shared::{get_db_pool, get_mutex_guard, Event, Show, Song, Venue};
 use sqlx::{Pool, Postgres};
 use tokio::fs::read_to_string;
 use uuid::Uuid;
@@ -13,17 +15,21 @@ use crate::{parse_json_file, workspace_root_directory};
 pub async fn seed() -> anyhow::Result<()> {
     let db_pool = get_db_pool().await.unwrap();
     create_tables(&db_pool).await?;
-    seed_venues(&db_pool).await?;
+    let venue_slugs = seed_venues(&db_pool).await?;
     seed_songs(&db_pool).await?;
+    seed_shows(&db_pool, &venue_slugs).await?;
     unimplemented!()
 }
 
-async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
-    let venues: Vec<Venue> = parse_json_file::<Vec<VenueJson>>("venues")
-        .await?
-        .into_iter()
-        .map(Into::into)
+async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<HashMap<String, Uuid>> {
+    let venues_json: Vec<VenueJson> = parse_json_file("venues").await?;
+
+    let venue_slugs: HashMap<_, _> = venues_json
+        .iter()
+        .map(|venue| (venue.slug.clone(), venue.id))
         .collect();
+
+    let venues: Vec<Venue> = venues_json.into_iter().map(Into::into).collect();
     println!("venues: {venues:#?}");
 
     insert_events(
@@ -36,7 +42,7 @@ async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
     )
     .await;
 
-    Ok(())
+    Ok(venue_slugs)
 }
 
 #[derive(Deserialize)]
@@ -45,6 +51,7 @@ struct VenueJson {
     pub name: String,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub slug: String,
 }
 
 impl From<VenueJson> for Venue {
@@ -80,6 +87,52 @@ async fn seed_songs(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
     .await;
 
     Ok(())
+}
+
+async fn seed_shows(
+    db_pool: &Pool<Postgres>,
+    venue_slugs: &HashMap<String, Uuid>,
+) -> anyhow::Result<()> {
+    let shows: Vec<Show> = parse_json_file::<Vec<ShowJson>>("shows")
+        .await?
+        .into_iter()
+        .map(|show| show.process(venue_slugs))
+        .collect();
+    println!("shows: {shows:#?}");
+
+    insert_events(
+        shows
+            .into_iter()
+            .map(|show| Event::InsertShow(show))
+            .map(|event| EventForInsertion::from(&event)),
+        get_mutex_guard().await,
+        db_pool,
+    )
+    .await;
+
+    Ok(())
+}
+
+#[derive(Deserialize)]
+struct ShowJson {
+    pub id: Uuid,
+    pub date: NaiveDate,
+    pub venue: VenueOnlySlug,
+}
+
+#[derive(Deserialize)]
+struct VenueOnlySlug {
+    pub slug: String,
+}
+
+impl ShowJson {
+    pub fn process(self, venue_slugs: &HashMap<String, Uuid>) -> Show {
+        Show {
+            id: self.id,
+            date: self.date,
+            venue_id: venue_slugs[&self.venue.slug],
+        }
+    }
 }
 
 fn sql_file_path(file_name_root: &str) -> PathBuf {
