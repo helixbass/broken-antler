@@ -19,20 +19,10 @@ impl sauvignon::Database for Database {
         let id = id.as_uuid();
         match table_name {
             "venues" => self
-                .venues
-                .get(id)
-                .unwrap()
+                .venue_by_id(id)
                 .get_column(column_name, dependency_type),
-            "songs" => self
-                .songs
-                .get(id)
-                .unwrap()
-                .get_column(column_name, dependency_type),
-            "shows" => self
-                .shows
-                .get(id)
-                .unwrap()
-                .get_column(column_name, dependency_type),
+            "songs" => self.song_by_id(id).get_column(column_name, dependency_type),
+            "shows" => self.show_by_id(id).get_column(column_name, dependency_type),
             table_name => panic!("Unknown table name {table_name}"),
         }
     }
@@ -48,19 +38,19 @@ impl sauvignon::Database for Database {
         match table_name {
             "venues" => self
                 .venues
-                .values()
+                .iter()
                 .filter(|venue| venue.matches_wheres(wheres))
                 .map(|venue| venue.get_column(column_name, dependency_type))
                 .collect(),
             "songs" => self
                 .songs
-                .values()
+                .iter()
                 .filter(|song| song.matches_wheres(wheres))
                 .map(|song| song.get_column(column_name, dependency_type))
                 .collect(),
             "shows" => self
                 .shows
-                .values()
+                .iter()
                 .filter(|show| show.matches_wheres(wheres))
                 .map(|show| show.get_column(column_name, dependency_type))
                 .collect(),

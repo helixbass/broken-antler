@@ -1,5 +1,6 @@
+use std::collections::HashMap;
+
 use derive_builder::Builder;
-use indexmap::IndexMap;
 use juriji::read_events;
 use shared::Event;
 use sqlx::{Pool, Postgres};
@@ -10,7 +11,7 @@ use crate::{Show, Song, Venue};
 
 #[derive(Default)]
 pub struct VenuesCobbler {
-    pub assembling: IndexMap<Uuid, Venue>,
+    pub assembling: Vec<Venue>,
 }
 
 impl VenuesCobbler {
@@ -18,14 +19,14 @@ impl VenuesCobbler {
     pub fn accept_next(&mut self, event: &Event) {
         match event {
             Event::InsertVenue(venue) => {
-                self.assembling.insert(venue.id, venue.clone());
+                self.assembling.push(venue.clone());
             }
             _ => {}
         }
     }
 }
 
-impl From<VenuesCobbler> for IndexMap<Uuid, Venue> {
+impl From<VenuesCobbler> for Vec<Venue> {
     fn from(value: VenuesCobbler) -> Self {
         value.assembling
     }
@@ -33,7 +34,7 @@ impl From<VenuesCobbler> for IndexMap<Uuid, Venue> {
 
 #[derive(Default)]
 pub struct SongsCobbler {
-    pub assembling: IndexMap<Uuid, Song>,
+    pub assembling: Vec<Song>,
 }
 
 impl SongsCobbler {
@@ -41,14 +42,14 @@ impl SongsCobbler {
     pub fn accept_next(&mut self, event: &Event) {
         match event {
             Event::InsertSong(song) => {
-                self.assembling.insert(song.id, song.clone());
+                self.assembling.push(song.clone());
             }
             _ => {}
         }
     }
 }
 
-impl From<SongsCobbler> for IndexMap<Uuid, Song> {
+impl From<SongsCobbler> for Vec<Song> {
     fn from(value: SongsCobbler) -> Self {
         value.assembling
     }
@@ -56,7 +57,7 @@ impl From<SongsCobbler> for IndexMap<Uuid, Song> {
 
 #[derive(Default)]
 pub struct ShowsCobbler {
-    pub assembling: IndexMap<Uuid, Show>,
+    pub assembling: Vec<Show>,
 }
 
 impl ShowsCobbler {
@@ -64,14 +65,14 @@ impl ShowsCobbler {
     pub fn accept_next(&mut self, event: &Event) {
         match event {
             Event::InsertShow(show) => {
-                self.assembling.insert(show.id, show.clone());
+                self.assembling.push(show.clone());
             }
             _ => {}
         }
     }
 }
 
-impl From<ShowsCobbler> for IndexMap<Uuid, Show> {
+impl From<ShowsCobbler> for Vec<Show> {
     fn from(value: ShowsCobbler) -> Self {
         value.assembling
     }
@@ -79,12 +80,64 @@ impl From<ShowsCobbler> for IndexMap<Uuid, Show> {
 
 #[derive(Builder)]
 pub struct Database {
+    #[builder(setter(skip), default = "self.default_venues_by_id()")]
+    pub venues_by_id: HashMap<Uuid, usize>,
+    #[builder(setter(skip), default = "self.default_songs_by_id()")]
+    pub songs_by_id: HashMap<Uuid, usize>,
+    #[builder(setter(skip), default = "self.default_shows_by_id()")]
+    pub shows_by_id: HashMap<Uuid, usize>,
     #[builder(setter(into))]
-    pub venues: IndexMap<Uuid, Venue>,
+    pub venues: Vec<Venue>,
     #[builder(setter(into))]
-    pub songs: IndexMap<Uuid, Song>,
+    pub songs: Vec<Song>,
     #[builder(setter(into))]
-    pub shows: IndexMap<Uuid, Show>,
+    pub shows: Vec<Show>,
+}
+
+impl DatabaseBuilder {
+    fn default_venues_by_id(&self) -> HashMap<Uuid, usize> {
+        self.venues
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .map(|(index, venue)| (venue.id, index))
+            .collect()
+    }
+
+    fn default_songs_by_id(&self) -> HashMap<Uuid, usize> {
+        self.songs
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .map(|(index, song)| (song.id, index))
+            .collect()
+    }
+
+    fn default_shows_by_id(&self) -> HashMap<Uuid, usize> {
+        self.shows
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .map(|(index, show)| (show.id, index))
+            .collect()
+    }
+}
+
+impl Database {
+    pub fn venue_by_id(&self, id: &Uuid) -> &Venue {
+        &self.venues[self.venues_by_id[id]]
+    }
+
+    pub fn song_by_id(&self, id: &Uuid) -> &Song {
+        &self.songs[self.songs_by_id[id]]
+    }
+
+    pub fn show_by_id(&self, id: &Uuid) -> &Show {
+        &self.shows[self.shows_by_id[id]]
+    }
 }
 
 #[derive(Default)]
