@@ -94,6 +94,51 @@ async fn test_songs() {
     .await;
 }
 
+#[tokio::test]
+async fn test_shows() {
+    request_test(
+        r#"
+            {
+              shows {
+                id
+                date
+                venue {
+                  name
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.shows.*", response).len(), 2104);
+            assert_eq!(
+                _q("$.data.shows[0].id", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "ec57de4f-7c51-42a6-8f67-cea1d8cbe417"
+            );
+            assert_eq!(
+                _q("$.data.shows[0].date", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "1983-12-02"
+            );
+            assert_eq!(
+                _q("$.data.shows[0].venue.name", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "Harris-Millis Cafeteria, University of Vermont"
+            );
+        },
+    )
+    .await;
+}
+
 fn _q<'a>(query: &str, response: &'a serde_json::Value) -> NodeList<'a> {
     let path = JsonPath::parse(query).unwrap();
     path.query(response)
