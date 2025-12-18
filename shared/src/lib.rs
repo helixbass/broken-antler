@@ -7,7 +7,7 @@ mod event;
 mod types;
 
 pub use event::Event;
-pub use types::Venue;
+pub use types::{Show, Song, Venue};
 
 pub async fn get_db_pool() -> anyhow::Result<Pool<Postgres>> {
     let db_pool = PgPoolOptions::new()

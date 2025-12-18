@@ -9,14 +9,23 @@ async-trait = "0.1.89"
 derive_builder = "0.20.2"
 geoutils = { workspace = true }
 indexmap = "2.12.1"
+itertools = { workspace = true }
 juriji = { workspace = true }
 sauvignon = { path = "../../sauvignon" }
 sauvignon-axum = { path = "../../sauvignon/sauvignon-axum" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 shared = { path = "../shared" }
+smol_str = { workspace = true }
 sqlx = { workspace = true }
 squalid = { workspace = true }
 strum = { workspace = true }
 tokio = { workspace = true }
+tower = "0.5.2"
+tracing = { workspace = true }
+tracing-chrome = "0.7.2"
+tracing-subscriber = { version = "0.3.22", features = [ "env-filter" ] }
 uuid = { workspace = true }
+
+[dev-dependencies]
+serde_json_path = "0.7.2"

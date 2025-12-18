@@ -5,12 +5,16 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
+chrono = { workspace = true }
 clap = { version = "4.5.53", features = [ "derive" ] }
 geoutils = { workspace = true }
+itertools = { workspace = true }
 juriji = { workspace = true }
+regex = "1.12.2"
 serde = { workspace = true }
 serde_json = { workspace = true }
 shared = { path = "../shared" }
 sqlx = { workspace = true }
+squalid = { workspace = true }
 tokio = { workspace = true, features = [ "fs" ] }
 uuid = { workspace = true }

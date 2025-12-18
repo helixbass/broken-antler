@@ -9,9 +9,15 @@ pub fn workspace_root_directory() -> PathBuf {
     path
 }
 
-pub fn json_seed_file_path(file_name_root: &str) -> PathBuf {
+pub fn json_seed_file_directory() -> PathBuf {
     let mut path = workspace_root_directory();
-    path.push(&format!("phishin-seed/{file_name_root}.json"));
+    path.push("phishin-seed");
+    path
+}
+
+pub fn json_seed_file_path(file_name_root: &str) -> PathBuf {
+    let mut path = json_seed_file_directory();
+    path.push(&format!("{file_name_root}.json"));
     path
 }
 
