@@ -197,6 +197,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "borsh"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1da5ab77c1437701eeff7c88d968729e7766172279eab0676857b3d63af7a6f"
+dependencies = [
+ "cfg_aliases",
+]
+
+[[package]]
 name = "broken-antler"
 version = "0.1.0"
 dependencies = [
@@ -213,6 +222,7 @@ dependencies = [
  "serde_json",
  "serde_json_path",
  "shared",
+ "smol_str",
  "sqlx",
  "squalid 0.0.1-dev.0 (git+https://github.com/helixbass/squalid?rev=646f6bf)",
  "strum",
@@ -280,6 +290,12 @@ name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+
+[[package]]
+name = "cfg_aliases"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "chrono"
@@ -778,6 +794,15 @@ name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+
+[[package]]
+name = "heck-smol-str"
+version = "0.1.0"
+source = "git+https://github.com/helixbass/heck-smol-str?rev=0855492#0855492379e4d8c4b8716fbbecb7d7c254562c53"
+dependencies = [
+ "heck",
+ "smol_str",
+]
 
 [[package]]
 name = "hex"
@@ -1758,6 +1783,7 @@ dependencies = [
  "rancor",
  "rend",
  "rkyv_derive",
+ "smol_str",
  "tinyvec",
  "uuid",
 ]
@@ -1827,6 +1853,7 @@ dependencies = [
  "chrono",
  "derive_builder",
  "heck",
+ "heck-smol-str",
  "illicit",
  "indexmap",
  "indoc",
@@ -1838,6 +1865,7 @@ dependencies = [
  "sauvignon_shared",
  "serde",
  "serde_json",
+ "smol_str",
  "sql_query_builder",
  "sqlx",
  "squalid 0.0.1-dev.0 (git+https://github.com/helixbass/squalid?rev=646f6bf)",
@@ -1873,6 +1901,9 @@ dependencies = [
 [[package]]
 name = "sauvignon_shared"
 version = "0.1.0"
+dependencies = [
+ "smol_str",
+]
 
 [[package]]
 name = "schannel"
@@ -2068,6 +2099,7 @@ dependencies = [
  "geoutils",
  "juriji",
  "serde",
+ "smol_str",
  "sqlx",
  "tokio",
  "uuid",
@@ -2117,6 +2149,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "smol_str"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3498b0a27f93ef1402f20eefacfaa1691272ac4eca1cdc8c596cb0a245d6cbf5"
+dependencies = [
+ "borsh",
+ "serde_core",
 ]
 
 [[package]]

@@ -58,7 +58,7 @@ impl From<VenueJson> for Venue {
     fn from(value: VenueJson) -> Self {
         Self {
             id: value.id,
-            name: value.name,
+            name: value.name.into(),
             location: match (value.latitude, value.longitude) {
                 (Some(latitude), Some(longitude)) => Some(Location::new(latitude, longitude)),
                 (None, None) => None,
