@@ -15,23 +15,25 @@ async fn main() {
     let database = get_database(&db_pool).await;
     let schema = get_schema();
 
-    run_request(
-        r#"
-            {
-              venues {
-                name
-                shows {
-                  date
-                  venue {
+    for _ in 0..10 {
+        run_request(
+            r#"
+                {
+                  venues {
                     name
-                    id
+                    shows {
+                      date
+                      venue {
+                        name
+                        id
+                      }
+                    }
                   }
                 }
-              }
-            }
-        "#,
-        &schema,
-        &database,
-    )
-    .await;
+            "#,
+            &schema,
+            &database,
+        )
+        .await;
+    }
 }

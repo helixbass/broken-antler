@@ -6,8 +6,29 @@ use crate::{Database, Show, Song, Venue};
 
 #[async_trait]
 impl sauvignon::Database for Database {
-    #[instrument(level = "trace", skip(self))]
     async fn get_column(
+        &self,
+        _table_name: &str,
+        _column_name: &str,
+        _id: &Id,
+        _id_column_name: &str,
+        _dependency_type: DependencyType,
+    ) -> DependencyValue {
+        unreachable!()
+    }
+
+    async fn get_column_list(
+        &self,
+        _table_name: &str,
+        _column_name: &str,
+        _dependency_type: DependencyType,
+        _wheres: &[WhereResolved],
+    ) -> Vec<DependencyValue> {
+        unreachable!()
+    }
+
+    #[instrument(level = "trace", skip(self))]
+    fn get_column_sync(
         &self,
         table_name: &str,
         column_name: &str,
@@ -28,7 +49,7 @@ impl sauvignon::Database for Database {
     }
 
     #[instrument(level = "trace", skip(self))]
-    async fn get_column_list(
+    fn get_column_list_sync(
         &self,
         table_name: &str,
         column_name: &str,
@@ -70,6 +91,10 @@ impl sauvignon::Database for Database {
             },
             table_name => panic!("Unknown table name {table_name}"),
         }
+    }
+
+    fn is_sync(&self) -> bool {
+        true
     }
 }
 
