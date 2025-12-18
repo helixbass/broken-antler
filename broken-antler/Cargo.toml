@@ -24,3 +24,6 @@ tracing = { workspace = true }
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.22", features = [ "env-filter" ] }
 uuid = { workspace = true }
+
+[dev-dependencies]
+serde_json_path = "0.7.2"
