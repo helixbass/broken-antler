@@ -9,6 +9,7 @@ async-trait = "0.1.89"
 derive_builder = "0.20.2"
 geoutils = { workspace = true }
 indexmap = "2.12.1"
+itertools = { workspace = true }
 juriji = { workspace = true }
 sauvignon = { path = "../../sauvignon" }
 sauvignon-axum = { path = "../../sauvignon/sauvignon-axum" }

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use derive_builder::Builder;
+use itertools::Itertools;
 use juriji::read_events;
 use shared::Event;
 use sqlx::{Pool, Postgres};
@@ -86,6 +87,8 @@ pub struct Database {
     pub songs_by_id: HashMap<Uuid, usize>,
     #[builder(setter(skip), default = "self.default_shows_by_id()")]
     pub shows_by_id: HashMap<Uuid, usize>,
+    #[builder(setter(skip), default = "self.default_shows_by_venue_id()")]
+    pub shows_by_venue_id: HashMap<Uuid, Vec<usize>>,
     #[builder(setter(into))]
     pub venues: Vec<Venue>,
     #[builder(setter(into))]
@@ -122,6 +125,26 @@ impl DatabaseBuilder {
             .into_iter()
             .enumerate()
             .map(|(index, show)| (show.id, index))
+            .collect()
+    }
+
+    fn default_shows_by_venue_id(&self) -> HashMap<Uuid, Vec<usize>> {
+        self.shows
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .into_group_map_by(|(_index, show)| show.venue_id)
+            .into_iter()
+            .map(|(venue_id, shows_and_indexes)| {
+                (
+                    venue_id,
+                    shows_and_indexes
+                        .into_iter()
+                        .map(|(index, _)| index)
+                        .collect::<Vec<_>>(),
+                )
+            })
             .collect()
     }
 }
