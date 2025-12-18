@@ -60,6 +60,40 @@ async fn test_venues() {
     .await;
 }
 
+#[tokio::test]
+async fn test_songs() {
+    request_test(
+        r#"
+            {
+              songs {
+                id
+                title
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.songs.*", response).len(), 973);
+            assert_eq!(
+                _q("$.data.songs[0].id", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "9513527a-6047-485a-9a63-643618e98509"
+            );
+            assert_eq!(
+                _q("$.data.songs[0].title", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "(I Can’t Get No) Satisfaction"
+            );
+        },
+    )
+    .await;
+}
+
 fn _q<'a>(query: &str, response: &'a serde_json::Value) -> NodeList<'a> {
     let path = JsonPath::parse(query).unwrap();
     path.query(response)

@@ -30,7 +30,7 @@ async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<HashMap<String,
         .collect();
 
     let venues: Vec<Venue> = venues_json.into_iter().map(Into::into).collect();
-    println!("venues: {venues:#?}");
+    // println!("venues: {venues:#?}");
 
     insert_events(
         venues
@@ -74,7 +74,7 @@ async fn seed_songs(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
         .into_iter()
         .map(Into::into)
         .collect();
-    println!("songs: {songs:#?}");
+    // println!("songs: {songs:#?}");
 
     insert_events(
         songs
@@ -98,7 +98,7 @@ async fn seed_shows(
         .into_iter()
         .map(|show| show.process(venue_slugs))
         .collect();
-    println!("shows: {shows:#?}");
+    // println!("shows: {shows:#?}");
 
     insert_events(
         shows
