@@ -36,24 +36,38 @@ impl sauvignon::Database for Database {
         wheres: &[WhereResolved],
     ) -> Vec<DependencyValue> {
         match table_name {
-            "venues" => self
-                .venues
-                .iter()
-                .filter(|venue| venue.matches_wheres(wheres))
-                .map(|venue| venue.get_column(column_name, dependency_type))
-                .collect(),
-            "songs" => self
-                .songs
-                .iter()
-                .filter(|song| song.matches_wheres(wheres))
-                .map(|song| song.get_column(column_name, dependency_type))
-                .collect(),
-            "shows" => self
-                .shows
-                .iter()
-                .filter(|show| show.matches_wheres(wheres))
-                .map(|show| show.get_column(column_name, dependency_type))
-                .collect(),
+            "venues" => {
+                assert!(wheres.is_empty());
+                self.venues
+                    .iter()
+                    // .filter(|venue| venue.matches_wheres(wheres))
+                    .map(|venue| venue.get_column(column_name, dependency_type))
+                    .collect()
+            }
+            "songs" => {
+                assert!(wheres.is_empty());
+                self.songs
+                    .iter()
+                    // .filter(|song| song.matches_wheres(wheres))
+                    .map(|song| song.get_column(column_name, dependency_type))
+                    .collect()
+            }
+            "shows" => match wheres.is_empty() {
+                true => self
+                    .shows
+                    .iter()
+                    .map(|show| show.get_column(column_name, dependency_type))
+                    .collect(),
+                false => {
+                    assert!(wheres.len() == 1 && wheres[0].column_name == "venue_id");
+                    self.shows_by_venue_id[wheres[0].value.as_id().as_uuid()]
+                        .iter()
+                        .map(|show_index| {
+                            self.shows[*show_index].get_column(column_name, dependency_type)
+                        })
+                        .collect()
+                }
+            },
             table_name => panic!("Unknown table name {table_name}"),
         }
     }
@@ -130,6 +144,7 @@ impl Row for Show {
     }
 }
 
+#[allow(dead_code)]
 trait MatchWheres {
     fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool;
 }
