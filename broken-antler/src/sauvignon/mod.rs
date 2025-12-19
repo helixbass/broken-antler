@@ -5,7 +5,7 @@ use sauvignon::{ColumnToken, ColumnTokens, DependencyType, DependencyValue, Id, 
 use smol_str::ToSmolStr;
 use tracing::instrument;
 
-use crate::{Database, Show, Song, Venue};
+use crate::{Database, Set, Show, Song, Venue};
 
 #[async_trait]
 impl sauvignon::Database for Database {
@@ -52,6 +52,9 @@ impl sauvignon::Database for Database {
             Self::SHOWS_TABLE => self
                 .show_by_id(id)
                 .get_column(column_token.column, dependency_type),
+            Self::SETS_TABLE => self
+                .set_by_id(id)
+                .get_column(column_token.column, dependency_type),
             table_token => panic!("Unknown table token {table_token}"),
         }
     }
@@ -96,6 +99,14 @@ impl sauvignon::Database for Database {
                         .collect()
                 }
             },
+            Self::SETS_TABLE => {
+                assert!(wheres.is_empty());
+                self.sets
+                    .iter()
+                    // .filter(|set| set.matches_wheres(wheres))
+                    .map(|set| set.get_column(column_token.column, dependency_type))
+                    .collect()
+            }
             table_token => panic!("Unknown table token {table_token}"),
         }
     }
@@ -139,6 +150,16 @@ impl sauvignon::Database for Database {
                         .into_iter()
                         .collect(),
                     ),
+                    (
+                        "sets".to_smolstr(),
+                        [
+                            ("id".to_smolstr(), Database::SET_ID_COLUMN_TOKEN),
+                            ("set_name".to_smolstr(), Database::SET_SET_NAME_COLUMN_TOKEN),
+                            ("show_id".to_smolstr(), Database::SET_SHOW_ID_COLUMN_TOKEN),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
                 ]
                 .into_iter()
                 .collect()
@@ -152,6 +173,7 @@ impl Database {
     const VENUES_TABLE: u32 = 0;
     const SONGS_TABLE: u32 = 1;
     const SHOWS_TABLE: u32 = 2;
+    const SETS_TABLE: u32 = 3;
 
     const VENUE_ID_COLUMN: u32 = 0;
     const VENUE_NAME_COLUMN: u32 = 1;
@@ -160,6 +182,9 @@ impl Database {
     const SHOW_ID_COLUMN: u32 = 4;
     const SHOW_DATE_COLUMN: u32 = 5;
     const SHOW_VENUE_ID_COLUMN: u32 = 6;
+    const SET_ID_COLUMN: u32 = 7;
+    const SET_SET_NAME_COLUMN: u32 = 8;
+    const SET_SHOW_ID_COLUMN: u32 = 9;
 
     const VENUE_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
         table: Self::VENUES_TABLE,
@@ -188,6 +213,18 @@ impl Database {
     const SHOW_VENUE_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
         table: Self::SHOWS_TABLE,
         column: Self::SHOW_VENUE_ID_COLUMN,
+    };
+    const SET_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SETS_TABLE,
+        column: Self::SET_ID_COLUMN,
+    };
+    const SET_SET_NAME_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SETS_TABLE,
+        column: Self::SET_SET_NAME_COLUMN,
+    };
+    const SET_SHOW_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SETS_TABLE,
+        column: Self::SET_SHOW_ID_COLUMN,
     };
 }
 
@@ -262,6 +299,33 @@ impl Row for Show {
     }
 }
 
+impl Row for Set {
+    // #[instrument(level = "trace", skip(self))]
+    fn get_column(&self, column_token: u32, dependency_type: DependencyType) -> DependencyValue {
+        match column_token {
+            Database::SET_ID_COLUMN => {
+                assert!(matches!(
+                    dependency_type,
+                    DependencyType::Id | DependencyType::ListOfIds
+                ));
+                DependencyValue::Id(Id::Uuid(self.id))
+            }
+            Database::SET_SET_NAME_COLUMN => {
+                assert_eq!(dependency_type, DependencyType::String);
+                DependencyValue::String(self.set_name.to_smolstr())
+            }
+            Database::SET_SHOW_ID_COLUMN => {
+                assert!(matches!(
+                    dependency_type,
+                    DependencyType::Id | DependencyType::ListOfIds
+                ));
+                DependencyValue::Id(Id::Uuid(self.show_id))
+            }
+            _ => panic!("Unknown column token: {column_token}"),
+        }
+    }
+}
+
 #[allow(dead_code)]
 trait MatchWheres {
     fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool;
@@ -301,6 +365,16 @@ impl MatchWheres for Show {
                 }
                 _ => unimplemented!(),
             }
+        }
+        true
+    }
+}
+
+impl MatchWheres for Set {
+    #[instrument(level = "trace", skip(self))]
+    fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool {
+        for _where in wheres {
+            unimplemented!()
         }
         true
     }

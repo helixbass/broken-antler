@@ -139,6 +139,42 @@ async fn test_shows() {
     .await;
 }
 
+#[tokio::test]
+async fn test_sets() {
+    request_test(
+        r#"
+            {
+              sets {
+                id
+                show {
+                  date
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.sets.*", response).len(), 5664);
+            assert_eq!(
+                _q("$.data.sets[0].id", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "4a00cc9d-41b6-4a66-b119-47b3661d22bc"
+            );
+            assert_eq!(
+                _q("$.data.sets[0].show.date", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "1992-07-19"
+            );
+        },
+    )
+    .await;
+}
+
 fn _q<'a>(query: &str, response: &'a serde_json::Value) -> NodeList<'a> {
     let path = JsonPath::parse(query).unwrap();
     path.query(response)

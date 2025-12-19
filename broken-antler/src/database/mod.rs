@@ -8,7 +8,7 @@ use sqlx::{Pool, Postgres};
 use tracing::instrument;
 use uuid::Uuid;
 
-use crate::{Show, Song, Venue};
+use crate::{Set, Show, Song, Venue};
 
 #[derive(Default)]
 pub struct VenuesCobbler {
@@ -79,6 +79,29 @@ impl From<ShowsCobbler> for Vec<Show> {
     }
 }
 
+#[derive(Default)]
+pub struct SetsCobbler {
+    pub assembling: Vec<Set>,
+}
+
+impl SetsCobbler {
+    #[instrument(level = "trace", skip(self))]
+    pub fn accept_next(&mut self, event: &Event) {
+        match event {
+            Event::InsertSet(set) => {
+                self.assembling.push(set.clone());
+            }
+            _ => {}
+        }
+    }
+}
+
+impl From<SetsCobbler> for Vec<Set> {
+    fn from(value: SetsCobbler) -> Self {
+        value.assembling
+    }
+}
+
 #[derive(Builder)]
 pub struct Database {
     #[builder(setter(skip), default = "self.default_venues_by_id()")]
@@ -89,12 +112,16 @@ pub struct Database {
     pub shows_by_id: HashMap<Uuid, usize>,
     #[builder(setter(skip), default = "self.default_shows_by_venue_id()")]
     pub shows_by_venue_id: HashMap<Uuid, Vec<usize>>,
+    #[builder(setter(skip), default = "self.default_sets_by_id()")]
+    pub sets_by_id: HashMap<Uuid, usize>,
     #[builder(setter(into))]
     pub venues: Vec<Venue>,
     #[builder(setter(into))]
     pub songs: Vec<Song>,
     #[builder(setter(into))]
     pub shows: Vec<Show>,
+    #[builder(setter(into))]
+    pub sets: Vec<Set>,
 }
 
 impl DatabaseBuilder {
@@ -147,6 +174,16 @@ impl DatabaseBuilder {
             })
             .collect()
     }
+
+    fn default_sets_by_id(&self) -> HashMap<Uuid, usize> {
+        self.sets
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .map(|(index, set)| (set.id, index))
+            .collect()
+    }
 }
 
 impl Database {
@@ -161,6 +198,10 @@ impl Database {
     pub fn show_by_id(&self, id: &Uuid) -> &Show {
         &self.shows[self.shows_by_id[id]]
     }
+
+    pub fn set_by_id(&self, id: &Uuid) -> &Set {
+        &self.sets[self.sets_by_id[id]]
+    }
 }
 
 #[derive(Default)]
@@ -168,6 +209,7 @@ pub struct DatabaseCobbler {
     pub venues: VenuesCobbler,
     pub songs: SongsCobbler,
     pub shows: ShowsCobbler,
+    pub sets: SetsCobbler,
 }
 
 impl DatabaseCobbler {
@@ -176,6 +218,7 @@ impl DatabaseCobbler {
         self.venues.accept_next(event);
         self.songs.accept_next(event);
         self.shows.accept_next(event);
+        self.sets.accept_next(event);
     }
 }
 
@@ -185,6 +228,7 @@ impl From<DatabaseCobbler> for Database {
             .venues(value.venues)
             .songs(value.songs)
             .shows(value.shows)
+            .sets(value.sets)
             .build()
             .unwrap()
     }

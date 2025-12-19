@@ -31,7 +31,7 @@ pub struct Set {
     pub set_name: SetName,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Hash, strum::Display)]
 pub enum SetName {
     #[serde(alias = "Set 1")]
     Set1,
