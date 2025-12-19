@@ -1865,6 +1865,7 @@ dependencies = [
  "sauvignon_shared",
  "serde",
  "serde_json",
+ "smallvec",
  "smol_str",
  "sql_query_builder",
  "sqlx",
