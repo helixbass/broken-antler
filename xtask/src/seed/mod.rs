@@ -159,9 +159,11 @@ async fn seed_song_performances(
 
     let song_performances_by_set = get_song_performances_by_set(&song_performances);
 
-    assert!(song_performances
+    let song_performances_with_more_than_one_song = song_performances
         .iter()
-        .all(|song_performance| song_performance.songs.len() == 1));
+        .filter(|song_performance| song_performance.songs.len() != 1)
+        .collect::<Vec<_>>();
+    println!("perf: {song_performances_with_more_than_one_song:#?}");
 
     unimplemented!();
     // insert_events(

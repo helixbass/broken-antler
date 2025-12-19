@@ -1,12 +1,14 @@
 use clap::{Parser, Subcommand};
 
 mod add_ids;
+mod add_track_song_ids;
 mod concatenate_jsons;
 mod create_sets_json;
 mod seed;
 mod shared;
 
 use add_ids::add_ids;
+use add_track_song_ids::add_track_song_ids;
 use concatenate_jsons::concatenate_jsons;
 use create_sets_json::create_sets_json;
 use seed::seed;
@@ -32,6 +34,8 @@ enum Command {
     ConcatenateJsons { file_name_root: String },
     /// create sets seed file
     CreateSetsJson,
+    /// add per-individual-song UUID's to tracks JSON file(s)
+    AddTrackSongIds { file_name_root: String },
 }
 
 #[tokio::main]
@@ -50,6 +54,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::CreateSetsJson => {
             create_sets_json().await?;
+        }
+        Command::AddTrackSongIds { file_name_root } => {
+            add_track_song_ids(&file_name_root).await?;
         }
     }
 

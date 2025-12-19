@@ -35,7 +35,7 @@ pub async fn parse_json_file<TTarget: DeserializeOwned>(
     )?)
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct SongPerformanceJson {
     pub id: Uuid,
     pub set_name: SetName,
@@ -43,13 +43,13 @@ pub struct SongPerformanceJson {
     pub songs: Vec<SongOnlySlug>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct ShowOnlyOriginalId {
     #[serde(rename = "id")]
     pub original_id: u32,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct SongOnlySlug {
     pub slug: String,
 }
