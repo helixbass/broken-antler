@@ -27,7 +27,9 @@ impl sauvignon::Database for Database {
         unreachable!()
     }
 
-    #[instrument(level = "trace", skip(self))]
+    // TODO: it looked like perhaps this can get called so frequently
+    // that the tracing has some noticeable cost
+    // #[instrument(level = "trace", skip(self))]
     fn get_column_sync(
         &self,
         table_name: &str,
@@ -48,7 +50,7 @@ impl sauvignon::Database for Database {
         }
     }
 
-    #[instrument(level = "trace", skip(self))]
+    // #[instrument(level = "trace", skip(self))]
     fn get_column_list_sync(
         &self,
         table_name: &str,
@@ -103,7 +105,7 @@ trait Row {
 }
 
 impl Row for Venue {
-    #[instrument(level = "trace", skip(self))]
+    // #[instrument(level = "trace", skip(self))]
     fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
         match column_name {
             "name" => {
@@ -123,7 +125,7 @@ impl Row for Venue {
 }
 
 impl Row for Song {
-    #[instrument(level = "trace", skip(self))]
+    // #[instrument(level = "trace", skip(self))]
     fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
         match column_name {
             "title" => {
@@ -143,7 +145,7 @@ impl Row for Song {
 }
 
 impl Row for Show {
-    #[instrument(level = "trace", skip(self))]
+    // #[instrument(level = "trace", skip(self))]
     fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
         match column_name {
             "date" => {
