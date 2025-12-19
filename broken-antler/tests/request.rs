@@ -160,7 +160,7 @@ async fn test_sets() {
                     .unwrap()
                     .as_str()
                     .unwrap(),
-                "4a00cc9d-41b6-4a66-b119-47b3661d22bc"
+                "3647fd47-03d8-4602-8ad1-dd0edc236658"
             );
             assert_eq!(
                 _q("$.data.sets[0].show.date", response)
@@ -168,7 +168,7 @@ async fn test_sets() {
                     .unwrap()
                     .as_str()
                     .unwrap(),
-                "1992-07-19"
+                "1984-12-01"
             );
         },
     )

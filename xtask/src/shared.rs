@@ -1,9 +1,11 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::path::PathBuf;
 
 use chrono::NaiveDate;
-use itertools::Itertools;
+use indexmap::IndexMap;
 use serde::{de::DeserializeOwned, Deserialize};
+use squalid::_d;
 use tokio::fs::read_to_string;
 use uuid::Uuid;
 
@@ -56,20 +58,55 @@ pub struct SongOnlyId {
 
 pub fn get_song_performances_by_set(
     song_performances: &[SongPerformanceJson],
-) -> HashMap<u32, HashMap<SetName, Vec<&SongPerformanceJson>>> {
+) -> IndexMap<u32, IndexMap<SetName, Vec<&SongPerformanceJson>>> {
     song_performances
         .iter()
-        .into_group_map_by(|song_performance| song_performance.show.original_id)
+        .into_group_index_map_by(|song_performance| song_performance.show.original_id)
         .into_iter()
         .map(|(show_original_id, song_performances)| {
             (
                 show_original_id,
                 song_performances
                     .into_iter()
-                    .into_group_map_by(|song_performance| song_performance.set_name),
+                    .into_group_index_map_by(|song_performance| song_performance.set_name),
             )
         })
         .collect()
+}
+
+trait IteratorExt {
+    type Item;
+
+    fn into_group_index_map_by<TKey>(
+        self,
+        mapper: impl FnMut(&Self::Item) -> TKey,
+    ) -> IndexMap<TKey, Vec<Self::Item>>
+    where
+        TKey: Hash + Eq;
+}
+
+impl<TItem, TIterator> IteratorExt for TIterator
+where
+    TIterator: Iterator<Item = TItem>,
+{
+    type Item = TItem;
+
+    fn into_group_index_map_by<TKey>(
+        self,
+        mut mapper: impl FnMut(&Self::Item) -> TKey,
+    ) -> IndexMap<TKey, Vec<Self::Item>>
+    where
+        TKey: Hash + Eq,
+    {
+        let mut ret: IndexMap<TKey, Vec<Self::Item>> = _d();
+
+        for item in self {
+            let key = mapper(&item);
+            ret.entry(key).or_default().push(item);
+        }
+
+        ret
+    }
 }
 
 pub async fn get_show_original_ids() -> anyhow::Result<HashMap<u32, Uuid>> {
