@@ -52,3 +52,10 @@ pub enum SetName {
     #[serde(alias = "Unknown Set")]
     Unknown,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct SongPerformance {
+    pub id: Uuid,
+    pub set_id: Uuid,
+    pub song_id: Uuid,
+}

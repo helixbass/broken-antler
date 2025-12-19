@@ -1,6 +1,6 @@
 use juriji::{from_json_str_with_id, to_serde_json_value_without_id, EventForInsertion, ReadEvent};
 
-use crate::{Set, Show, Song, Venue};
+use crate::{Set, Show, Song, SongPerformance, Venue};
 
 #[derive(Debug)]
 pub enum Event {
@@ -8,6 +8,7 @@ pub enum Event {
     InsertSong(Song),
     InsertShow(Show),
     InsertSet(Set),
+    InsertSongPerformance(SongPerformance),
 }
 
 // TODO: make a new strum-like macro to generate this
@@ -17,6 +18,7 @@ impl Event {
     const INSERT_SONG: &'static str = "INSERT_SONG";
     const INSERT_SHOW: &'static str = "INSERT_SHOW";
     const INSERT_SET: &'static str = "INSERT_SET";
+    const INSERT_SONG_PERFORMANCE: &'static str = "INSERT_SONG_PERFORMANCE";
 }
 
 impl From<&Event> for EventForInsertion {
@@ -42,6 +44,11 @@ impl From<&Event> for EventForInsertion {
                 Event::INSERT_SET.to_owned(),
                 to_serde_json_value_without_id(set),
             ),
+            Event::InsertSongPerformance(song_performance) => EventForInsertion::new(
+                Some(song_performance.id),
+                Event::INSERT_SONG_PERFORMANCE.to_owned(),
+                to_serde_json_value_without_id(song_performance),
+            ),
         }
     }
 }
@@ -61,6 +68,10 @@ impl From<&ReadEvent> for Event {
             Event::INSERT_SET => {
                 Self::InsertSet(from_json_str_with_id(&value.payload, value.id.unwrap()))
             }
+            Event::INSERT_SONG_PERFORMANCE => Self::InsertSongPerformance(from_json_str_with_id(
+                &value.payload,
+                value.id.unwrap(),
+            )),
             type_ => panic!("Unknown event type: {type_}"),
         }
     }

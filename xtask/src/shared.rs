@@ -40,12 +40,18 @@ pub struct SongPerformanceJson {
     pub id: Uuid,
     pub set_name: SetName,
     pub show: ShowOnlyOriginalId,
+    pub songs: Vec<SongOnlySlug>,
 }
 
 #[derive(Deserialize)]
 pub struct ShowOnlyOriginalId {
     #[serde(rename = "id")]
     pub original_id: u32,
+}
+
+#[derive(Deserialize)]
+pub struct SongOnlySlug {
+    pub slug: String,
 }
 
 pub fn get_song_performances_by_set(
