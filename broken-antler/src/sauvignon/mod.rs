@@ -1,5 +1,8 @@
+use std::sync::LazyLock;
+
 use async_trait::async_trait;
-use sauvignon::{DependencyType, DependencyValue, Id, WhereResolved};
+use sauvignon::{ColumnToken, ColumnTokens, DependencyType, DependencyValue, Id, WhereResolved};
+use smol_str::ToSmolStr;
 use tracing::instrument;
 
 use crate::{Database, Show, Song, Venue};
@@ -98,6 +101,92 @@ impl sauvignon::Database for Database {
     fn is_sync(&self) -> bool {
         true
     }
+
+    fn column_tokens(&self) -> Option<&'static ColumnTokens> {
+        Some({
+            static COLUMN_TOKENS: LazyLock<ColumnTokens> = LazyLock::new(|| {
+                [
+                    (
+                        "venues".to_smolstr(),
+                        [
+                            ("id".to_smolstr(), Database::VENUE_ID_COLUMN_TOKEN),
+                            ("name".to_smolstr(), Database::VENUE_NAME_COLUMN_TOKEN),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                    (
+                        "songs".to_smolstr(),
+                        [
+                            ("id".to_smolstr(), Database::SONG_ID_COLUMN_TOKEN),
+                            ("title".to_smolstr(), Database::SONG_TITLE_COLUMN_TOKEN),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                    (
+                        "shows".to_smolstr(),
+                        [
+                            ("id".to_smolstr(), Database::SHOW_ID_COLUMN_TOKEN),
+                            ("date".to_smolstr(), Database::SHOW_DATE_COLUMN_TOKEN),
+                            (
+                                "venue_id".to_smolstr(),
+                                Database::SHOW_VENUE_ID_COLUMN_TOKEN,
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                ]
+                .into_iter()
+                .collect()
+            });
+            &*COLUMN_TOKENS
+        })
+    }
+}
+
+impl Database {
+    const VENUES_TABLE: u32 = 0;
+    const SONGS_TABLE: u32 = 1;
+    const SHOWS_TABLE: u32 = 2;
+
+    const VENUE_ID_COLUMN: u32 = 0;
+    const VENUE_NAME_COLUMN: u32 = 1;
+    const SONG_ID_COLUMN: u32 = 2;
+    const SONG_TITLE_COLUMN: u32 = 3;
+    const SHOW_ID_COLUMN: u32 = 4;
+    const SHOW_DATE_COLUMN: u32 = 5;
+    const SHOW_VENUE_ID_COLUMN: u32 = 6;
+
+    const VENUE_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::VENUES_TABLE,
+        column: Self::VENUE_ID_COLUMN,
+    };
+    const VENUE_NAME_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::VENUES_TABLE,
+        column: Self::VENUE_NAME_COLUMN,
+    };
+    const SONG_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SONGS_TABLE,
+        column: Self::SONG_ID_COLUMN,
+    };
+    const SONG_TITLE_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SONGS_TABLE,
+        column: Self::SONG_TITLE_COLUMN,
+    };
+    const SHOW_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SHOWS_TABLE,
+        column: Self::SHOW_ID_COLUMN,
+    };
+    const SHOW_DATE_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SHOWS_TABLE,
+        column: Self::SHOW_DATE_COLUMN,
+    };
+    const SHOW_VENUE_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SHOWS_TABLE,
+        column: Self::SHOW_VENUE_ID_COLUMN,
+    };
 }
 
 trait Row {
