@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use chrono::NaiveDate;
 use itertools::Itertools;
 use serde::{de::DeserializeOwned, Deserialize};
 use tokio::fs::read_to_string;
@@ -63,4 +64,26 @@ pub fn get_song_performances_by_set(
             )
         })
         .collect()
+}
+
+pub async fn get_show_original_ids() -> anyhow::Result<HashMap<u32, Uuid>> {
+    let shows_json = parse_json_file::<Vec<ShowJson>>("shows").await?;
+
+    Ok(shows_json
+        .iter()
+        .map(|show| (show.original_id, show.id))
+        .collect())
+}
+
+#[derive(Deserialize)]
+pub struct ShowJson {
+    pub id: Uuid,
+    pub original_id: u32,
+    pub date: NaiveDate,
+    pub venue: VenueOnlySlug,
+}
+
+#[derive(Deserialize)]
+pub struct VenueOnlySlug {
+    pub slug: String,
 }

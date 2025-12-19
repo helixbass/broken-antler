@@ -11,8 +11,9 @@ use concatenate_jsons::concatenate_jsons;
 use create_sets_json::create_sets_json;
 use seed::seed;
 pub use shared::{
-    get_song_performances_by_set, json_seed_file_directory, json_seed_file_path, parse_json_file,
-    workspace_root_directory, ShowOnlyOriginalId, SongPerformanceJson,
+    get_show_original_ids, get_song_performances_by_set, json_seed_file_directory,
+    json_seed_file_path, parse_json_file, workspace_root_directory, ShowJson, ShowOnlyOriginalId,
+    SongPerformanceJson, VenueOnlySlug,
 };
 
 #[derive(Parser)]
