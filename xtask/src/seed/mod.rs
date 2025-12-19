@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use chrono::NaiveDate;
 use geoutils::Location;
+use itertools::Itertools;
 use juriji::{insert_events, EventForInsertion};
 use serde::Deserialize;
 use shared::{get_db_pool, get_mutex_guard, Event, Show, Song, Venue};
@@ -10,14 +11,15 @@ use sqlx::{Pool, Postgres};
 use tokio::fs::read_to_string;
 use uuid::Uuid;
 
-use crate::{parse_json_file, workspace_root_directory};
+use crate::{parse_json_file, workspace_root_directory, SongPerformanceJson};
 
 pub async fn seed() -> anyhow::Result<()> {
     let db_pool = get_db_pool().await.unwrap();
     create_tables(&db_pool).await?;
     let venue_slugs = seed_venues(&db_pool).await?;
     seed_songs(&db_pool).await?;
-    seed_shows(&db_pool, &venue_slugs).await?;
+    let show_original_ids = seed_shows(&db_pool, &venue_slugs).await?;
+    seed_song_performances(&show_original_ids, &db_pool).await?;
     unimplemented!()
 }
 
@@ -69,11 +71,7 @@ impl From<VenueJson> for Venue {
 }
 
 async fn seed_songs(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
-    let songs: Vec<Song> = parse_json_file::<Vec<Song>>("songs")
-        .await?
-        .into_iter()
-        .map(Into::into)
-        .collect();
+    let songs: Vec<Song> = parse_json_file("songs").await?;
     // println!("songs: {songs:#?}");
 
     insert_events(
@@ -92,9 +90,15 @@ async fn seed_songs(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
 async fn seed_shows(
     db_pool: &Pool<Postgres>,
     venue_slugs: &HashMap<String, Uuid>,
-) -> anyhow::Result<()> {
-    let shows: Vec<Show> = parse_json_file::<Vec<ShowJson>>("shows")
-        .await?
+) -> anyhow::Result<HashMap<u32, String>> {
+    let shows_json = parse_json_file::<Vec<ShowJson>>("shows").await?;
+
+    let show_original_ids: HashMap<_, _> = shows_json
+        .iter()
+        .map(|show| (show.original_id, show.id))
+        .collect();
+
+    let shows: Vec<Show> = shows_json
         .into_iter()
         .map(|show| show.process(venue_slugs))
         .collect();
@@ -110,12 +114,13 @@ async fn seed_shows(
     )
     .await;
 
-    Ok(())
+    Ok(show_original_ids)
 }
 
 #[derive(Deserialize)]
 struct ShowJson {
     pub id: Uuid,
+    pub original_id: u32,
     pub date: NaiveDate,
     pub venue: VenueOnlySlug,
 }
@@ -133,6 +138,56 @@ impl ShowJson {
             venue_id: venue_slugs[&self.venue.slug],
         }
     }
+}
+
+async fn seed_song_performances(
+    show_original_ids: &HashMap<u32, String>,
+    db_pool: &Pool<Postgres>,
+) -> anyhow::Result<()> {
+    let song_performances: Vec<SongPerformanceJson> = parse_json_file("tracks").await?;
+
+    let song_performances_by_set = song_performances
+        .iter()
+        .into_group_map_by(|song_performance| song_performance.show.original_id)
+        .into_iter()
+        .map(|(show_original_id, song_performances)| {
+            (
+                show_original_id,
+                song_performances
+                    .into_iter()
+                    .into_group_map_by(|song_performance| song_performance.set_name),
+            )
+        })
+        .collect::<HashMap<_, _>>();
+
+    insert_events(
+        song_performances_by_set
+            .iter()
+            .flat_map(|(show_original_id, sets)| {
+                sets.keys()
+                    .map(|set| Event::InsertSet(show_original_ids[show_original_id], set))
+                    .collect::<Vec<_>>()
+            })
+            .map(|event| EventForInsertion::from(&event)),
+        get_mutex_guard().await,
+        db_pool,
+    )
+    .await;
+
+    unimplemented!();
+    // println!("song_performances: {song_performances:#?}");
+
+    // insert_events(
+    //     song_performances
+    //         .into_iter()
+    //         .map(|song_performance| Event::InsertSongPerformance(song_performance))
+    //         .map(|event| EventForInsertion::from(&event)),
+    //     get_mutex_guard().await,
+    //     db_pool,
+    // )
+    // .await;
+
+    // Ok(())
 }
 
 fn sql_file_path(file_name_root: &str) -> PathBuf {
