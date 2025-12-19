@@ -40,7 +40,7 @@ pub struct SongPerformanceJson {
     pub id: Uuid,
     pub set_name: SetName,
     pub show: ShowOnlyOriginalId,
-    pub songs: Vec<SongOnlySlug>,
+    pub songs: Vec<SongOnlyId>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -50,8 +50,8 @@ pub struct ShowOnlyOriginalId {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SongOnlySlug {
-    pub slug: String,
+pub struct SongOnlyId {
+    pub id: Uuid,
 }
 
 pub fn get_song_performances_by_set(

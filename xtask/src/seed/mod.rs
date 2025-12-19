@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use geoutils::Location;
+use itertools::Itertools;
 use juriji::{insert_events, EventForInsertion};
 use serde::Deserialize;
 use shared::{
@@ -24,7 +25,8 @@ pub async fn seed() -> anyhow::Result<()> {
     seed_shows(&db_pool, &venue_slugs).await?;
     let sets = seed_sets(&db_pool).await?;
     seed_song_performances(&sets, &db_pool).await?;
-    unimplemented!()
+
+    Ok(())
 }
 
 async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<HashMap<String, Uuid>> {
@@ -152,41 +154,42 @@ async fn seed_sets(db_pool: &Pool<Postgres>) -> anyhow::Result<HashMap<(u32, Set
 }
 
 async fn seed_song_performances(
-    sets: &HashMap<(u32, SetName), Uuid>,
+    sets_map: &HashMap<(u32, SetName), Uuid>,
     db_pool: &Pool<Postgres>,
 ) -> anyhow::Result<()> {
     let song_performances: Vec<SongPerformanceJson> = parse_json_file("tracks").await?;
 
     let song_performances_by_set = get_song_performances_by_set(&song_performances);
 
-    let song_performances_with_more_than_one_song = song_performances
+    for events in &song_performances_by_set
         .iter()
-        .filter(|song_performance| song_performance.songs.len() != 1)
-        .collect::<Vec<_>>();
-    println!("perf: {song_performances_with_more_than_one_song:#?}");
-
-    unimplemented!();
-    // insert_events(
-    //     song_performances_by_set
-    //         .iter()
-    //         .flat_map(|(show_original_id, sets)| {
-    //             sets.into_iter()
-    //                 .flat_map(|(set_name, song_performances)| {
-    //                     song_performances.into_iter().map(|song_performance| {
-    //                         Event::InsertSongPerformance(SongPerformance {
-    //                             id: song_performance.id,
-    //                             set_id: sets[(show_original_id, set_name)],
-    //                             song_id:
-    //                         })
-    //                     })
-    //                 })
-    //                 .collect::<Vec<_>>()
-    //         })
-    //         .map(|event| EventForInsertion::from(&event)),
-    //     get_mutex_guard().await,
-    //     db_pool,
-    // )
-    // .await;
+        .flat_map(|(show_original_id, sets)| {
+            sets.into_iter()
+                .flat_map(|(set_name, song_performances)| {
+                    song_performances
+                        .into_iter()
+                        .flat_map(|song_performance| {
+                            song_performance
+                                .songs
+                                .iter()
+                                .map(|song| {
+                                    Event::InsertSongPerformance(SongPerformance {
+                                        id: song_performance.id,
+                                        set_id: sets_map[&(*show_original_id, *set_name)],
+                                        song_id: song.id,
+                                    })
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
+        })
+        .map(|event| EventForInsertion::from(&event))
+        .chunks(1000)
+    {
+        insert_events(events, get_mutex_guard().await, db_pool).await;
+    }
 
     Ok(())
 }
