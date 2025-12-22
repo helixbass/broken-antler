@@ -1,14 +1,17 @@
 use std::sync::LazyLock;
 
 use async_trait::async_trait;
-use sauvignon::{ColumnToken, ColumnTokens, DependencyType, DependencyValue, Id, WhereResolved};
+use sauvignon::{
+    ColumnToken, ColumnTokens, DatabaseInterface, DependencyType, DependencyValue, Id,
+    WhereResolved,
+};
 use smol_str::ToSmolStr;
 use tracing::instrument;
 
 use crate::{Database, Set, Show, Song, Venue};
 
 #[async_trait]
-impl sauvignon::Database for Database {
+impl DatabaseInterface for Database {
     async fn get_column(
         &self,
         _table_name: &str,
