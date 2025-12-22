@@ -175,6 +175,33 @@ async fn test_sets() {
     .await;
 }
 
+#[tokio::test]
+async fn test_search() {
+    request_test(
+        r#"
+            {
+              search(query: "antelope") {
+                ... on Song {
+                  title
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 1);
+            assert_eq!(
+                _q("$.data.search[0].title", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "Run Like an Antelope"
+            );
+        },
+    )
+    .await;
+}
+
 fn _q<'a>(query: &str, response: &'a serde_json::Value) -> NodeList<'a> {
     let path = JsonPath::parse(query).unwrap();
     path.query(response)

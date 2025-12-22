@@ -70,6 +70,15 @@ pub fn get_schema() -> Schema {
                     ids => id_column_list()
                 ]
             }
+            search => {
+                params => [
+                    query => String!
+                ]
+                type => [SearchResult!]!
+            }
+        ]
+        unions => [
+            SearchResult => [Show, Song, Venue],
         ]
     }
 }
