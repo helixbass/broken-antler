@@ -3,7 +3,7 @@ use sauvignon::{json_from_response, Database, Schema};
 use broken_antler::{get_database, get_schema};
 use shared::get_db_pool;
 
-async fn run_request(request: &str, schema: &Schema, database: &dyn Database) {
+async fn run_request(request: &str, schema: &Schema, database: &Database) {
     let response = schema.request(request, database).await;
     assert!(response.data.is_some());
     let _json = json_from_response(&response);

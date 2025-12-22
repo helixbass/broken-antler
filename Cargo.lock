@@ -1898,7 +1898,7 @@ dependencies = [
  "smol_str",
  "sql_query_builder",
  "sqlx",
- "squalid 0.0.1-dev.0 (git+https://github.com/helixbass/squalid?rev=646f6bf)",
+ "squalid 0.0.1-dev.0 (git+https://github.com/helixbass/squalid?rev=97ad97e)",
  "strum",
  "thiserror",
  "tokio",
@@ -2436,6 +2436,14 @@ dependencies = [
 name = "squalid"
 version = "0.0.1-dev.0"
 source = "git+https://github.com/helixbass/squalid?rev=646f6bf#646f6bf00a40ea3d1fce6eac541194b2c87b4d6d"
+dependencies = [
+ "itertools 0.11.0",
+]
+
+[[package]]
+name = "squalid"
+version = "0.0.1-dev.0"
+source = "git+https://github.com/helixbass/squalid?rev=97ad97e#97ad97e8b72a611cd211cc7ace63cb16f22bacfb"
 dependencies = [
  "itertools 0.11.0",
 ]

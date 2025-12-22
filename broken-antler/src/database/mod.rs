@@ -235,7 +235,7 @@ impl From<DatabaseCobbler> for Database {
 }
 
 #[instrument(level = "trace", skip(db_pool))]
-pub async fn get_database(db_pool: &Pool<Postgres>) -> Database {
+pub async fn get_database(db_pool: &Pool<Postgres>) -> sauvignon::Database {
     let mut cobbler = DatabaseCobbler::default();
     read_events(None, db_pool)
         .await
@@ -244,5 +244,5 @@ pub async fn get_database(db_pool: &Pool<Postgres>) -> Database {
         .for_each(|event| {
             cobbler.accept_next(&event);
         });
-    cobbler.into()
+    sauvignon::Database::Dyn(Box::new(Database::from(cobbler)))
 }
