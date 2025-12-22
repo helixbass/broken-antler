@@ -75,6 +75,10 @@ pub fn get_schema() -> Schema {
                     query => String!
                 ]
                 type => [SearchResult!]!
+                internal_dependencies => [
+                    search_results => custom(
+                    )
+                ]
             }
         ]
         unions => [
