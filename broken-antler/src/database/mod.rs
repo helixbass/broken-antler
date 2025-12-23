@@ -281,7 +281,16 @@ impl Database {
                             .collect::<SearchResults>()
                     })
                     .unwrap_or_default(),
-                _ => unimplemented!(),
+                ShowDate::MonthAndYear { month, year } => self
+                    .shows_by_month_year
+                    .get(&month)
+                    .and_then(|months| months.get(&year))
+                    .map(|days| {
+                        days.values()
+                            .map(|show_index| SearchResult::Show(&self.shows[*show_index]))
+                            .collect::<SearchResults>()
+                    })
+                    .unwrap_or_default(),
             })
             .collect()
     }
@@ -370,7 +379,7 @@ impl<'a> From<&'a Song> for SearchResult<'a> {
 pub type SearchResults<'a> = SmallVec<[SearchResult<'a>; 16]>;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-enum Month {
+pub enum Month {
     January,
     February,
     March,
@@ -408,7 +417,7 @@ impl FromStr for Month {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-struct Year(u32);
+pub struct Year(u32);
 
 impl FromStr for Year {
     type Err = ();
@@ -429,7 +438,7 @@ impl FromStr for Year {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-struct DayOfMonth(u32);
+pub struct DayOfMonth(u32);
 
 impl FromStr for DayOfMonth {
     type Err = ();
