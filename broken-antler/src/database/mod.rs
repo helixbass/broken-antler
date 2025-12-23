@@ -268,7 +268,19 @@ impl Database {
                     .and_then(|months| months.get(&day))
                     .and_then(|years| years.get(&year))
                     .map(|show_index| SearchResult::Show(&self.shows[*show_index]))
-                    .into_iter(),
+                    .into_iter()
+                    .collect::<SearchResults>(),
+                ShowDate::MonthAndDay { month, day } => self
+                    .shows_by_month_day
+                    .get(&month)
+                    .and_then(|months| months.get(&day))
+                    .map(|years| {
+                        years
+                            .values()
+                            .map(|show_index| SearchResult::Show(&self.shows[*show_index]))
+                            .collect::<SearchResults>()
+                    })
+                    .unwrap_or_default(),
                 _ => unimplemented!(),
             })
             .collect()
