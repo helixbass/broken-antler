@@ -1,10 +1,12 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use derive_builder::Builder;
 use itertools::Itertools;
 use juriji::read_events;
 use shared::Event;
 use smallvec::SmallVec;
+use smol_str::StrExt;
 use sqlx::{Pool, Postgres};
 use squalid::regex;
 use tracing::instrument;
@@ -206,7 +208,23 @@ impl Database {
     }
 
     pub fn search_results<'a>(&'a self, query: &str) -> SearchResults<'a> {
-        let query_words = regex!(r#"[^a-zA-Z']+"#).split(query).collect::<Vec<_>>();
+        let query_words = regex!(r#"[^a-zA-Z']+"#)
+            .split(query)
+            .collect::<SmallVec<[_; 10]>>();
+        let months = query_words
+            .iter()
+            .enumerate()
+            .filter_map(|(index, query_word)| {
+                Month::from_str(query_word).ok().map(|month| (index, month))
+            })
+            .collect::<SmallVec<[_; 4]>>();
+        let years = query_words
+            .iter()
+            .enumerate()
+            .filter_map(|(index, query_word)| {
+                Year::from_str(query_word).ok().map(|year| (index, year))
+            })
+            .collect::<SmallVec<[_; 4]>>();
         unimplemented!()
     }
 }
@@ -236,6 +254,63 @@ impl<'a> From<&'a Song> for SearchResult<'a> {
 }
 
 pub type SearchResults<'a> = SmallVec<[SearchResult<'a>; 16]>;
+
+enum Month {
+    January,
+    February,
+    March,
+    April,
+    May,
+    June,
+    July,
+    August,
+    September,
+    October,
+    November,
+    December,
+}
+
+impl FromStr for Month {
+    type Err = ();
+
+    fn from_str(str: &str) -> Result<Self, Self::Err> {
+        match &*str.to_lowercase_smolstr() {
+            "1" | "01" | "jan" | "january" => Ok(Self::January),
+            "2" | "02" | "feb" | "february" => Ok(Self::February),
+            "3" | "03" | "mar" | "march" => Ok(Self::March),
+            "4" | "04" | "apr" | "april" => Ok(Self::April),
+            "5" | "05" | "may" => Ok(Self::May),
+            "6" | "06" | "jun" | "june" => Ok(Self::June),
+            "7" | "07" | "jul" | "july" => Ok(Self::July),
+            "8" | "08" | "aug" | "august" => Ok(Self::August),
+            "9" | "09" | "sep" | "sept" | "september" => Ok(Self::September),
+            "10" | "oct" | "october" => Ok(Self::October),
+            "11" | "nov" | "november" => Ok(Self::November),
+            "12" | "dec" | "december" => Ok(Self::December),
+            _ => Err(()),
+        }
+    }
+}
+
+struct Year(u32);
+
+impl FromStr for Year {
+    type Err = ();
+
+    fn from_str(str: &str) -> Result<Self, Self::Err> {
+        if !regex!(r#"^\d{4}$"#).is_match(str) {
+            return Err(());
+        }
+        let year = str.parse::<u32>().unwrap();
+        if year < 1980 {
+            return Err(());
+        }
+        if year > 2040 {
+            return Err(());
+        }
+        Ok(Self(year))
+    }
+}
 
 #[derive(Default)]
 pub struct DatabaseCobbler {
