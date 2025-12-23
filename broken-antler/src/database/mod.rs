@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::FromStr;
 
+use chrono::Datelike;
 use derive_builder::Builder;
 use itertools::Itertools;
 use juriji::read_events;
@@ -204,13 +205,40 @@ impl DatabaseBuilder {
     fn default_shows_by_month_day(
         &self,
     ) -> HashMap<Month, HashMap<DayOfMonth, HashMap<Year, usize>>> {
-        unimplemented!()
+        // TODO: are there days with more than one show?
+        let mut ret: HashMap<Month, HashMap<DayOfMonth, HashMap<Year, usize>>> = _d();
+        self.shows
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .for_each(|(index, show)| {
+                ret.entry(Month::from(show.date.month()))
+                    .or_default()
+                    .entry(DayOfMonth::new(show.date.day()))
+                    .or_default()
+                    .insert(Year::new(u32::try_from(show.date.year()).unwrap()), index);
+            });
+        ret
     }
 
     fn default_shows_by_month_year(
         &self,
     ) -> HashMap<Month, HashMap<Year, HashMap<DayOfMonth, usize>>> {
-        unimplemented!()
+        let mut ret: HashMap<Month, HashMap<Year, HashMap<DayOfMonth, usize>>> = _d();
+        self.shows
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .for_each(|(index, show)| {
+                ret.entry(Month::from(show.date.month()))
+                    .or_default()
+                    .entry(Year::new(u32::try_from(show.date.year()).unwrap()))
+                    .or_default()
+                    .insert(DayOfMonth::new(show.date.day()), index);
+            });
+        ret
     }
 }
 
@@ -416,8 +444,42 @@ impl FromStr for Month {
     }
 }
 
+impl From<u32> for Month {
+    fn from(value: u32) -> Self {
+        match value {
+            1 => Self::January,
+            2 => Self::February,
+            3 => Self::March,
+            4 => Self::April,
+            5 => Self::May,
+            6 => Self::June,
+            7 => Self::July,
+            8 => Self::August,
+            9 => Self::September,
+            10 => Self::October,
+            11 => Self::November,
+            12 => Self::December,
+            _ => panic!("unexpected month"),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Year(u32);
+
+impl Year {
+    const MIN: u32 = 1980;
+    const MAX: u32 = 2040;
+}
+
+impl Year {
+    pub fn new(year: u32) -> Self {
+        if year < Year::MIN || year > Year::MAX {
+            panic!("expected year in range");
+        }
+        Self(year)
+    }
+}
 
 impl FromStr for Year {
     type Err = ();
@@ -427,10 +489,10 @@ impl FromStr for Year {
             return Err(());
         }
         let year = str.parse::<u32>().unwrap();
-        if year < 1980 {
+        if year < Year::MIN {
             return Err(());
         }
-        if year > 2040 {
+        if year > Year::MAX {
             return Err(());
         }
         Ok(Self(year))
@@ -439,6 +501,15 @@ impl FromStr for Year {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DayOfMonth(u32);
+
+impl DayOfMonth {
+    pub fn new(day: u32) -> Self {
+        if day < 1 || day > 31 {
+            panic!("expected day in range");
+        }
+        Self(day)
+    }
+}
 
 impl FromStr for DayOfMonth {
     type Err = ();

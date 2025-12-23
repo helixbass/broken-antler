@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 async-trait = "0.1.89"
+chrono = { workspace = true }
 derive_builder = "0.20.2"
 geoutils = { workspace = true }
 indexmap = { workspace = true }
