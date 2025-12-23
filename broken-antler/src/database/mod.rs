@@ -352,6 +352,13 @@ impl Database {
                 self.venue_word_counts[venue_index] == found_words.len()
             })
             .map(|(venue_index, _)| &self.venues[*venue_index]);
+        let complete_songs = exact_word_matches
+            .songs
+            .iter()
+            .filter(|(song_index, found_words)| {
+                self.song_word_counts[song_index] == found_words.len()
+            })
+            .map(|(song_index, _)| &self.songs[*song_index]);
 
         // TODO: presumably cap # of search results and prioritize eg
         // exact matches in those results?
@@ -389,6 +396,7 @@ impl Database {
                     .unwrap_or_default(),
             })
             .chain(complete_venues.map(SearchResult::Venue))
+            .chain(complete_songs.map(SearchResult::Song))
             .collect()
     }
 }
