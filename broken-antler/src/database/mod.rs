@@ -129,9 +129,9 @@ pub struct Database {
     #[builder(setter(skip), default = "self.default_shows_by_month_year()")]
     pub shows_by_month_year: HashMap<Month, HashMap<Year, HashMap<DayOfMonth, usize>>>,
     #[builder(setter(skip), default = "self.default_song_word_counts()")]
-    pub song_word_counts: HashMap<usize, usize>,
+    pub song_word_counts: HashMap<SongIndex, usize>,
     #[builder(setter(skip), default = "self.default_venue_word_counts()")]
-    pub venue_word_counts: HashMap<usize, usize>,
+    pub venue_word_counts: HashMap<VenueIndex, usize>,
     #[builder(setter(into))]
     pub venues: Vec<Venue>,
     #[builder(setter(into))]
@@ -203,7 +203,7 @@ impl DatabaseBuilder {
             .collect()
     }
 
-    fn default_venue_and_song_words(&self) -> Trie<u8, Word> {
+    fn default_venue_and_song_words(&self) -> Trie<u8, Vec<Word>> {
         unimplemented!()
     }
 
@@ -345,6 +345,14 @@ impl Database {
                 }
                 accum
             });
+        let complete_venues = exact_word_matches
+            .venues
+            .iter()
+            .filter(|(venue_index, found_words)| {
+                self.venue_word_counts[venue_index] == found_words.len()
+            })
+            .map(|(venue_index, _)| &self.venues[*venue_index]);
+
         // TODO: presumably cap # of search results and prioritize eg
         // exact matches in those results?
         all_show_dates
@@ -380,6 +388,7 @@ impl Database {
                     })
                     .unwrap_or_default(),
             })
+            .chain(complete_venues.map(SearchResult::Venue))
             .collect()
     }
 }
@@ -388,14 +397,12 @@ fn word_regex() -> &'static Regex {
     regex!(r#"[^a-zA-Z0-9']+"#)
 }
 
-type ShowDates = SmallVec<[ShowDate; 4]>;
-
 fn get_all_show_dates(
     months: &[(usize, Month)],
     days: &[(usize, DayOfMonth)],
     years: &[(usize, Year)],
-) -> SmallVec<[ShowDate; 4]> {
-    let mut ret: ShowDates = _d();
+) -> Vec<ShowDate> {
+    let mut ret: Vec<ShowDate> = _d();
     months.into_iter().for_each(|(month_index, month)| {
         days.into_iter()
             .filter(|(day_index, _)| day_index != month_index)
