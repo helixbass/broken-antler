@@ -176,11 +176,11 @@ async fn test_sets() {
 }
 
 #[tokio::test]
-async fn test_search() {
+async fn test_search_complete_song() {
     request_test(
         r#"
             {
-              search(query: "antelope") {
+              search(query: "Run like an antelope") {
                 ... on Song {
                   title
                 }
@@ -196,6 +196,105 @@ async fn test_search() {
                     .as_str()
                     .unwrap(),
                 "Run Like an Antelope"
+            );
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_search_complete_venue() {
+    request_test(
+        r#"
+            {
+              search(query: "deer creek") {
+                ... on Venue {
+                  name
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 1);
+            assert_eq!(
+                _q("$.data.search[0].name", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "Deer Creek"
+            );
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_search_all_words_in_wrong_order() {
+    request_test(
+        r#"
+            {
+              search(query: "creek deer") {
+                ... on Venue {
+                  name
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 1);
+            assert_eq!(
+                _q("$.data.search[0].name", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "Deer Creek"
+            );
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_search_multiple_complete() {
+    request_test(
+        r#"
+            {
+              search(query: "Llama Cavern") {
+                ... on Song {
+                  title
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 2);
+            assert!(
+                _q("$.data.search[0].title", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    == "Llama"
+                    && _q("$.data.search[1].title", response)
+                        .exactly_one()
+                        .unwrap()
+                        .as_str()
+                        .unwrap()
+                        == "Cavern"
+                    || _q("$.data.search[0].title", response)
+                        .exactly_one()
+                        .unwrap()
+                        .as_str()
+                        .unwrap()
+                        == "Cavern"
+                        && _q("$.data.search[1].title", response)
+                            .exactly_one()
+                            .unwrap()
+                            .as_str()
+                            .unwrap()
+                            == "Llama"
             );
         },
     )
