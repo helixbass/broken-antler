@@ -6,7 +6,6 @@ use chrono::Datelike;
 use derive_builder::Builder;
 use itertools::Itertools;
 use juriji::read_events;
-use regex::Regex;
 use shared::Event;
 use smallvec::SmallVec;
 use smol_str::{SmolStr, StrExt};
@@ -212,7 +211,7 @@ impl DatabaseBuilder {
                 .into_iter()
                 .enumerate()
                 .for_each(|(song_index, song)| {
-                    word_regex().split(&song.title).enumerate().for_each(
+                    words(&song.title.to_lowercase()).enumerate().for_each(
                         |(song_word_index, song_word)| {
                             by_word
                                 .entry(song_word.into())
@@ -230,7 +229,7 @@ impl DatabaseBuilder {
                 .into_iter()
                 .enumerate()
                 .for_each(|(venue_index, venue)| {
-                    word_regex().split(&venue.name).enumerate().for_each(
+                    words(&venue.name.to_lowercase()).enumerate().for_each(
                         |(venue_word_index, venue_word)| {
                             by_word
                                 .entry(venue_word.into())
@@ -298,7 +297,7 @@ impl DatabaseBuilder {
             .unwrap()
             .into_iter()
             .enumerate()
-            .map(|(index, song)| (index, word_regex().split(&song.title).count()))
+            .map(|(index, song)| (index, words(&song.title.to_lowercase()).count()))
             .collect()
     }
 
@@ -308,7 +307,7 @@ impl DatabaseBuilder {
             .unwrap()
             .into_iter()
             .enumerate()
-            .map(|(index, venue)| (index, word_regex().split(&venue.name).count()))
+            .map(|(index, venue)| (index, words(&venue.name.to_lowercase()).count()))
             .collect()
     }
 }
@@ -332,7 +331,7 @@ impl Database {
 
     pub fn search_results<'a>(&'a self, query: &str) -> SearchResults<'a> {
         let query = query.to_lowercase();
-        let query_words = word_regex().split(&query).collect::<Vec<_>>();
+        let query_words = words(&query).collect::<Vec<_>>();
         let months = query_words
             .iter()
             .enumerate()
@@ -447,8 +446,10 @@ impl Database {
     }
 }
 
-fn word_regex() -> &'static Regex {
+fn words(str: &str) -> impl Iterator<Item = &str> {
     regex!(r#"[^a-zA-Z0-9']+"#)
+        .split(str)
+        .filter(|word| !word.is_empty())
 }
 
 fn get_all_show_dates(
@@ -504,6 +505,7 @@ type VenueIndex = usize;
 type SongIndex = usize;
 type WordIndexInVenueOrSongWords = usize;
 
+#[derive(Debug)]
 pub enum Word {
     Venue {
         index: WordIndexInVenueOrSongWords,
