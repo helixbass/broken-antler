@@ -301,6 +301,57 @@ async fn test_search_multiple_complete() {
     .await;
 }
 
+#[tokio::test]
+async fn test_search_show() {
+    request_test(
+        r#"
+            {
+              search(query: "Oct 21 1995") {
+                ... on Show {
+                  date
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 1);
+            assert_eq!(
+                _q("$.data.search[0].date", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "1995-10-21"
+            );
+        },
+    )
+    .await;
+
+    request_test(
+        r#"
+            {
+              search(query: "1995 10 21") {
+                ... on Show {
+                  date
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 1);
+            assert_eq!(
+                _q("$.data.search[0].date", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "1995-10-21"
+            );
+        },
+    )
+    .await;
+}
+
 fn _q<'a>(query: &str, response: &'a serde_json::Value) -> NodeList<'a> {
     let path = JsonPath::parse(query).unwrap();
     path.query(response)
