@@ -6,6 +6,7 @@ use juriji::read_events;
 use shared::Event;
 use smallvec::SmallVec;
 use sqlx::{Pool, Postgres};
+use squalid::regex;
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -205,6 +206,7 @@ impl Database {
     }
 
     pub fn search_results<'a>(&'a self, query: &str) -> SearchResults<'a> {
+        let query_words = regex!(r#"[^a-zA-Z']+"#).split(query).collect::<Vec<_>>();
         unimplemented!()
     }
 }
