@@ -6,6 +6,7 @@ use chrono::Datelike;
 use derive_builder::Builder;
 use itertools::Itertools;
 use juriji::read_events;
+use regex::Regex;
 use shared::Event;
 use smallvec::SmallVec;
 use smol_str::StrExt;
@@ -127,6 +128,10 @@ pub struct Database {
     pub shows_by_month_day: HashMap<Month, HashMap<DayOfMonth, HashMap<Year, usize>>>,
     #[builder(setter(skip), default = "self.default_shows_by_month_year()")]
     pub shows_by_month_year: HashMap<Month, HashMap<Year, HashMap<DayOfMonth, usize>>>,
+    #[builder(setter(skip), default = "self.default_song_word_counts()")]
+    pub song_word_counts: HashMap<usize, usize>,
+    #[builder(setter(skip), default = "self.default_venue_word_counts()")]
+    pub venue_word_counts: HashMap<usize, usize>,
     #[builder(setter(into))]
     pub venues: Vec<Venue>,
     #[builder(setter(into))]
@@ -240,6 +245,26 @@ impl DatabaseBuilder {
             });
         ret
     }
+
+    fn default_song_word_counts(&self) -> HashMap<usize, usize> {
+        self.songs
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .map(|(index, song)| (index, word_regex().split(&song.title).count()))
+            .collect()
+    }
+
+    fn default_venue_word_counts(&self) -> HashMap<usize, usize> {
+        self.venues
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .map(|(index, venue)| (index, word_regex().split(&venue.name).count()))
+            .collect()
+    }
 }
 
 impl Database {
@@ -260,9 +285,7 @@ impl Database {
     }
 
     pub fn search_results<'a>(&'a self, query: &str) -> SearchResults<'a> {
-        let query_words = regex!(r#"[^a-zA-Z0-9']+"#)
-            .split(query)
-            .collect::<SmallVec<[_; 10]>>();
+        let query_words = word_regex().split(query).collect::<SmallVec<[_; 10]>>();
         let months = query_words
             .iter()
             .enumerate()
@@ -322,6 +345,10 @@ impl Database {
             })
             .collect()
     }
+}
+
+fn word_regex() -> &'static Regex {
+    regex!(r#"[^a-zA-Z0-9']+"#)
 }
 
 type ShowDates = SmallVec<[ShowDate; 4]>;
