@@ -27,6 +27,7 @@ tower = "0.5.2"
 tracing = { workspace = true }
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.22", features = [ "env-filter" ] }
+trie-rs = "0.4.2"
 uuid = { workspace = true }
 
 [dev-dependencies]

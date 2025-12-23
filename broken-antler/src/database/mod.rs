@@ -8,8 +8,9 @@ use shared::Event;
 use smallvec::SmallVec;
 use smol_str::StrExt;
 use sqlx::{Pool, Postgres};
-use squalid::regex;
+use squalid::{_d, regex};
 use tracing::instrument;
+use trie_rs::map::Trie;
 use uuid::Uuid;
 
 use crate::{Set, Show, Song, Venue};
@@ -118,6 +119,8 @@ pub struct Database {
     pub shows_by_venue_id: HashMap<Uuid, Vec<usize>>,
     #[builder(setter(skip), default = "self.default_sets_by_id()")]
     pub sets_by_id: HashMap<Uuid, usize>,
+    #[builder(setter(skip), default = "self.default_venue_and_song_words()")]
+    pub venue_and_song_words: Trie<u8, Word>,
     #[builder(setter(into))]
     pub venues: Vec<Venue>,
     #[builder(setter(into))]
@@ -188,6 +191,10 @@ impl DatabaseBuilder {
             .map(|(index, set)| (set.id, index))
             .collect()
     }
+
+    fn default_venue_and_song_words(&self) -> Trie<u8, Word> {
+        unimplemented!()
+    }
 }
 
 impl Database {
@@ -208,7 +215,7 @@ impl Database {
     }
 
     pub fn search_results<'a>(&'a self, query: &str) -> SearchResults<'a> {
-        let query_words = regex!(r#"[^a-zA-Z']+"#)
+        let query_words = regex!(r#"[^a-zA-Z0-9']+"#)
             .split(query)
             .collect::<SmallVec<[_; 10]>>();
         let months = query_words
@@ -234,8 +241,65 @@ impl Database {
                     .map(|day| (index, day))
             })
             .collect::<SmallVec<[_; 4]>>();
+        let all_show_dates = get_all_show_dates(&months, &days, &years);
         unimplemented!()
     }
+}
+
+type ShowDates = SmallVec<[ShowDate; 4]>;
+
+fn get_all_show_dates(
+    months: &[(usize, Month)],
+    days: &[(usize, DayOfMonth)],
+    years: &[(usize, Year)],
+) -> SmallVec<[ShowDate; 4]> {
+    let mut ret: ShowDates = _d();
+    months.into_iter().for_each(|(month_index, month)| {
+        days.into_iter()
+            .filter(|(day_index, _)| day_index != month_index)
+            .for_each(|(day_index, day)| {
+                years
+                    .into_iter()
+                    .filter(|(year_index, _)| year_index != month_index && year_index != day_index)
+                    .for_each(|(_, year)| {
+                        ret.push(ShowDate::MonthAndDayAndYear {
+                            month: *month,
+                            day: *day,
+                            year: *year,
+                        });
+                    });
+            });
+    });
+    if !ret.is_empty() {
+        return ret;
+    }
+    months.into_iter().for_each(|(month_index, month)| {
+        days.into_iter()
+            .filter(|(day_index, _)| day_index != month_index)
+            .for_each(|(_, day)| {
+                ret.push(ShowDate::MonthAndDay {
+                    month: *month,
+                    day: *day,
+                });
+            });
+    });
+    months.into_iter().for_each(|(month_index, month)| {
+        years
+            .into_iter()
+            .filter(|(year_index, _)| year_index != month_index)
+            .for_each(|(_, year)| {
+                ret.push(ShowDate::MonthAndYear {
+                    month: *month,
+                    year: *year,
+                });
+            });
+    });
+    ret
+}
+
+pub enum Word {
+    Venue { index: usize, venue_id: Uuid },
+    Song { index: usize, song_id: Uuid },
 }
 
 pub enum SearchResult<'a> {
@@ -264,6 +328,7 @@ impl<'a> From<&'a Song> for SearchResult<'a> {
 
 pub type SearchResults<'a> = SmallVec<[SearchResult<'a>; 16]>;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum Month {
     January,
     February,
@@ -301,6 +366,7 @@ impl FromStr for Month {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Year(u32);
 
 impl FromStr for Year {
@@ -321,6 +387,7 @@ impl FromStr for Year {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct DayOfMonth(u32);
 
 impl FromStr for DayOfMonth {
@@ -339,6 +406,22 @@ impl FromStr for DayOfMonth {
         }
         Ok(Self(day))
     }
+}
+
+enum ShowDate {
+    MonthAndDay {
+        month: Month,
+        day: DayOfMonth,
+    },
+    MonthAndYear {
+        month: Month,
+        year: Year,
+    },
+    MonthAndDayAndYear {
+        month: Month,
+        day: DayOfMonth,
+        year: Year,
+    },
 }
 
 #[derive(Default)]
