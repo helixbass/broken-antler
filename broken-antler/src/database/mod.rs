@@ -123,7 +123,7 @@ pub struct Database {
     #[builder(setter(skip), default = "self.default_sets_by_id()")]
     pub sets_by_id: HashMap<Uuid, usize>,
     #[builder(setter(skip), default = "self.default_venue_and_song_words()")]
-    pub venue_and_song_words: Trie<u8, Word>,
+    pub venue_and_song_words: Trie<u8, Vec<Word>>,
     #[builder(setter(skip), default = "self.default_shows_by_month_day()")]
     pub shows_by_month_day: HashMap<Month, HashMap<DayOfMonth, HashMap<Year, usize>>>,
     #[builder(setter(skip), default = "self.default_shows_by_month_year()")]
@@ -285,7 +285,8 @@ impl Database {
     }
 
     pub fn search_results<'a>(&'a self, query: &str) -> SearchResults<'a> {
-        let query_words = word_regex().split(query).collect::<SmallVec<[_; 10]>>();
+        let query = query.to_lowercase();
+        let query_words = word_regex().split(&query).collect::<Vec<_>>();
         let months = query_words
             .iter()
             .enumerate()
@@ -310,6 +311,42 @@ impl Database {
             })
             .collect::<SmallVec<[_; 4]>>();
         let all_show_dates = get_all_show_dates(&months, &days, &years);
+        type QueryWordIndex = usize;
+        #[derive(Default)]
+        struct ExactWordMatches {
+            venues:
+                HashMap<VenueIndex, SmallVec<[(WordIndexInVenueOrSongWords, QueryWordIndex); 8]>>,
+            songs: HashMap<SongIndex, SmallVec<[(WordIndexInVenueOrSongWords, QueryWordIndex); 8]>>,
+        }
+        let exact_word_matches: ExactWordMatches = query_words
+            .iter()
+            .map(|query_word| self.venue_and_song_words.exact_match(*query_word))
+            .enumerate()
+            .fold(_d(), |mut accum, (query_word_index, exact_matches)| {
+                if let Some(exact_matches) = exact_matches {
+                    for exact_match in exact_matches {
+                        match exact_match {
+                            Word::Venue { index, venue_index } => {
+                                accum
+                                    .venues
+                                    .entry(*venue_index)
+                                    .or_default()
+                                    .push((*index, query_word_index));
+                            }
+                            Word::Song { index, song_index } => {
+                                accum
+                                    .songs
+                                    .entry(*song_index)
+                                    .or_default()
+                                    .push((*index, query_word_index));
+                            }
+                        }
+                    }
+                }
+                accum
+            });
+        // TODO: presumably cap # of search results and prioritize eg
+        // exact matches in those results?
         all_show_dates
             .into_iter()
             .flat_map(|show_date| match show_date {
@@ -402,9 +439,19 @@ fn get_all_show_dates(
     ret
 }
 
+type VenueIndex = usize;
+type SongIndex = usize;
+type WordIndexInVenueOrSongWords = usize;
+
 pub enum Word {
-    Venue { index: usize, venue_id: Uuid },
-    Song { index: usize, song_id: Uuid },
+    Venue {
+        index: WordIndexInVenueOrSongWords,
+        venue_index: VenueIndex,
+    },
+    Song {
+        index: WordIndexInVenueOrSongWords,
+        song_index: SongIndex,
+    },
 }
 
 pub enum SearchResult<'a> {
