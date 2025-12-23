@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::str::FromStr;
 
 use derive_builder::Builder;
@@ -121,6 +122,10 @@ pub struct Database {
     pub sets_by_id: HashMap<Uuid, usize>,
     #[builder(setter(skip), default = "self.default_venue_and_song_words()")]
     pub venue_and_song_words: Trie<u8, Word>,
+    #[builder(setter(skip), default = "self.default_shows_by_month_day()")]
+    pub shows_by_month_day: HashMap<Month, HashMap<DayOfMonth, HashMap<Year, usize>>>,
+    #[builder(setter(skip), default = "self.default_shows_by_month_year()")]
+    pub shows_by_month_year: HashMap<Month, HashMap<Year, HashMap<DayOfMonth, usize>>>,
     #[builder(setter(into))]
     pub venues: Vec<Venue>,
     #[builder(setter(into))]
@@ -195,6 +200,18 @@ impl DatabaseBuilder {
     fn default_venue_and_song_words(&self) -> Trie<u8, Word> {
         unimplemented!()
     }
+
+    fn default_shows_by_month_day(
+        &self,
+    ) -> HashMap<Month, HashMap<DayOfMonth, HashMap<Year, usize>>> {
+        unimplemented!()
+    }
+
+    fn default_shows_by_month_year(
+        &self,
+    ) -> HashMap<Month, HashMap<Year, HashMap<DayOfMonth, usize>>> {
+        unimplemented!()
+    }
 }
 
 impl Database {
@@ -242,7 +259,19 @@ impl Database {
             })
             .collect::<SmallVec<[_; 4]>>();
         let all_show_dates = get_all_show_dates(&months, &days, &years);
-        unimplemented!()
+        all_show_dates
+            .into_iter()
+            .flat_map(|show_date| match show_date {
+                ShowDate::MonthAndDayAndYear { month, day, year } => self
+                    .shows_by_month_day
+                    .get(&month)
+                    .and_then(|months| months.get(&day))
+                    .and_then(|years| years.get(&year))
+                    .map(|show_index| SearchResult::Show(&self.shows[*show_index]))
+                    .into_iter(),
+                _ => unimplemented!(),
+            })
+            .collect()
     }
 }
 
@@ -328,7 +357,7 @@ impl<'a> From<&'a Song> for SearchResult<'a> {
 
 pub type SearchResults<'a> = SmallVec<[SearchResult<'a>; 16]>;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum Month {
     January,
     February,
@@ -366,7 +395,7 @@ impl FromStr for Month {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 struct Year(u32);
 
 impl FromStr for Year {
@@ -387,7 +416,7 @@ impl FromStr for Year {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 struct DayOfMonth(u32);
 
 impl FromStr for DayOfMonth {
