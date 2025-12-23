@@ -4,6 +4,7 @@ use derive_builder::Builder;
 use itertools::Itertools;
 use juriji::read_events;
 use shared::Event;
+use smallvec::SmallVec;
 use sqlx::{Pool, Postgres};
 use tracing::instrument;
 use uuid::Uuid;
@@ -202,7 +203,37 @@ impl Database {
     pub fn set_by_id(&self, id: &Uuid) -> &Set {
         &self.sets[self.sets_by_id[id]]
     }
+
+    pub fn search_results<'a>(&'a self, query: &str) -> SearchResults<'a> {
+        unimplemented!()
+    }
 }
+
+pub enum SearchResult<'a> {
+    Venue(&'a Venue),
+    Show(&'a Show),
+    Song(&'a Song),
+}
+
+impl<'a> From<&'a Venue> for SearchResult<'a> {
+    fn from(value: &'a Venue) -> Self {
+        Self::Venue(value)
+    }
+}
+
+impl<'a> From<&'a Show> for SearchResult<'a> {
+    fn from(value: &'a Show) -> Self {
+        Self::Show(value)
+    }
+}
+
+impl<'a> From<&'a Song> for SearchResult<'a> {
+    fn from(value: &'a Song) -> Self {
+        Self::Song(value)
+    }
+}
+
+pub type SearchResults<'a> = SmallVec<[SearchResult<'a>; 16]>;
 
 #[derive(Default)]
 pub struct DatabaseCobbler {

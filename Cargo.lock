@@ -222,6 +222,7 @@ dependencies = [
  "serde_json",
  "serde_json_path",
  "shared",
+ "smallvec",
  "smol_str",
  "sqlx",
  "squalid 0.0.1-dev.0 (git+https://github.com/helixbass/squalid?rev=646f6bf)",

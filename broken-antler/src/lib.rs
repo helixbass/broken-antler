@@ -1,6 +1,7 @@
 use ::sauvignon::{
-    schema, CarverOrPopulator, ExternalDependencyValues, InternalDependencyValues, PopulatorList,
-    PopulatorListInterface, Schema, UnionOrInterfaceTypePopulatorList,
+    schema, CarverOrPopulator, DependencyValue, ExternalDependencyValues, Id,
+    InternalDependencyValues, PopulatorList, PopulatorListInterface, ResolveInternalDependencySync,
+    Schema, UnionOrInterfaceTypePopulatorList,
 };
 use smol_str::SmolStr;
 use tracing::instrument;
@@ -8,10 +9,62 @@ use tracing::instrument;
 mod database;
 mod sauvignon;
 
-pub use database::{get_database, Database, DatabaseCobbler, VenuesCobbler};
+pub use database::{
+    get_database, Database, DatabaseCobbler, SearchResult, SearchResults, VenuesCobbler,
+};
 pub use shared::{Event, Set, Show, Song, Venue};
 
-pub struct SearchResultsTypePopulator {}
+#[derive(Default)]
+struct SearchResultsResolver {}
+
+impl ResolveInternalDependencySync for SearchResultsResolver {
+    fn resolve(
+        &self,
+        external_dependency_values: &ExternalDependencyValues,
+        preceding_internal_dependency_values: &InternalDependencyValues,
+        database: &::sauvignon::Database,
+    ) -> DependencyValue {
+        database
+            .as_any()
+            .downcast_ref::<Database>()
+            .unwrap()
+            .search_results(
+                preceding_internal_dependency_values
+                    .get("query")
+                    .unwrap()
+                    .as_string(),
+            )
+            .into_iter()
+            .map(|search_result| match search_result {
+                SearchResult::Venue(venue) => DependencyValue::Map(
+                    [
+                        ("type".into(), DependencyValue::String("Venue".into())),
+                        ("id".into(), DependencyValue::Id(Id::Uuid(venue.id))),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+                SearchResult::Song(song) => DependencyValue::Map(
+                    [
+                        ("type".into(), DependencyValue::String("Song".into())),
+                        ("id".into(), DependencyValue::Id(Id::Uuid(song.id))),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+                SearchResult::Show(show) => DependencyValue::Map(
+                    [
+                        ("type".into(), DependencyValue::String("Show".into())),
+                        ("id".into(), DependencyValue::Id(Id::Uuid(show.id))),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            })
+    }
+}
+
+struct SearchResultsTypePopulator {}
 
 impl SearchResultsTypePopulator {
     pub fn new() -> Self {
@@ -35,7 +88,7 @@ impl UnionOrInterfaceTypePopulatorList for SearchResultsTypePopulator {
     }
 }
 
-pub struct SearchResultsPopulator {}
+struct SearchResultsPopulator {}
 
 impl SearchResultsPopulator {
     pub fn new() -> Self {
@@ -132,8 +185,21 @@ pub fn get_schema() -> Schema {
                 ]
                 type => [SearchResult!]!
                 internal_dependencies => [
-                    search_results => custom_sync {
-                    }
+                    search_results => custom_sync(
+                        type => DependencyType::List(Box::new(DependencyType::Map({
+                            [
+                                (
+                                    "id".into(),
+                                    DependencyType::Id,
+                                ),
+                                (
+                                    "type".into(),
+                                    DependencyType::String,
+                                ),
+                            ]
+                        })))
+                        resolver => Box::new(SearchResultsResolver::default())
+                    )
                 ]
                 populator => custom {
                     CarverOrPopulator::UnionOrInterfaceTypePopulatorList(
