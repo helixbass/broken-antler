@@ -70,16 +70,16 @@ pub fn get_schema() -> Schema {
                     ids => id_column_list()
                 ]
             }
-            search => {
-                params => [
-                    query => String!
-                ]
-                type => [SearchResult!]!
-                internal_dependencies => [
-                    search_results => custom(
-                    )
-                ]
-            }
+            // search => {
+            //     params => [
+            //         query => String!
+            //     ]
+            //     type => [SearchResult!]!
+            //     internal_dependencies => [
+            //         search_results => custom_sync(
+            //         )
+            //     ]
+            // }
         ]
         unions => [
             SearchResult => [Show, Song, Venue],

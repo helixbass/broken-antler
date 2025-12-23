@@ -18,7 +18,7 @@ impl DatabaseInterface for Database {
         _column_name: &str,
         _id: &Id,
         _id_column_name: &str,
-        _dependency_type: DependencyType,
+        _dependency_type: &DependencyType,
     ) -> DependencyValue {
         unreachable!()
     }
@@ -27,7 +27,7 @@ impl DatabaseInterface for Database {
         &self,
         _table_name: &str,
         _column_name: &str,
-        _dependency_type: DependencyType,
+        _dependency_type: &DependencyType,
         _wheres: &[WhereResolved],
     ) -> Vec<DependencyValue> {
         unreachable!()
@@ -41,7 +41,7 @@ impl DatabaseInterface for Database {
         column_token: ColumnToken,
         id: &Id,
         id_column_name: &str,
-        dependency_type: DependencyType,
+        dependency_type: &DependencyType,
     ) -> DependencyValue {
         assert_eq!(id_column_name, "id");
         let id = id.as_uuid();
@@ -66,9 +66,10 @@ impl DatabaseInterface for Database {
     fn get_column_list_sync(
         &self,
         column_token: ColumnToken,
-        dependency_type: DependencyType,
+        dependency_type: &DependencyType,
         wheres: &[WhereResolved],
     ) -> Vec<DependencyValue> {
+        let dependency_type = dependency_type.as_list_inner();
         match column_token.table {
             Self::VENUES_TABLE => {
                 assert!(wheres.is_empty());
@@ -232,22 +233,19 @@ impl Database {
 }
 
 trait Row {
-    fn get_column(&self, column_token: u32, dependency_type: DependencyType) -> DependencyValue;
+    fn get_column(&self, column_token: u32, dependency_type: &DependencyType) -> DependencyValue;
 }
 
 impl Row for Venue {
     // #[instrument(level = "trace", skip(self))]
-    fn get_column(&self, column_token: u32, dependency_type: DependencyType) -> DependencyValue {
+    fn get_column(&self, column_token: u32, dependency_type: &DependencyType) -> DependencyValue {
         match column_token {
             Database::VENUE_NAME_COLUMN => {
-                assert_eq!(dependency_type, DependencyType::String);
+                assert_eq!(dependency_type, &DependencyType::String);
                 DependencyValue::String(self.name.clone())
             }
             Database::VENUE_ID_COLUMN => {
-                assert!(matches!(
-                    dependency_type,
-                    DependencyType::Id | DependencyType::ListOfIds
-                ));
+                assert_eq!(dependency_type, &DependencyType::Id);
                 DependencyValue::Id(Id::Uuid(self.id))
             }
             _ => panic!("Unknown column token: {column_token}"),
@@ -257,17 +255,14 @@ impl Row for Venue {
 
 impl Row for Song {
     // #[instrument(level = "trace", skip(self))]
-    fn get_column(&self, column_token: u32, dependency_type: DependencyType) -> DependencyValue {
+    fn get_column(&self, column_token: u32, dependency_type: &DependencyType) -> DependencyValue {
         match column_token {
             Database::SONG_TITLE_COLUMN => {
-                assert_eq!(dependency_type, DependencyType::String);
+                assert_eq!(dependency_type, &DependencyType::String);
                 DependencyValue::String(self.title.clone())
             }
             Database::SONG_ID_COLUMN => {
-                assert!(matches!(
-                    dependency_type,
-                    DependencyType::Id | DependencyType::ListOfIds
-                ));
+                assert_eq!(dependency_type, &DependencyType::Id);
                 DependencyValue::Id(Id::Uuid(self.id))
             }
             _ => panic!("Unknown column token: {column_token}"),
@@ -277,24 +272,18 @@ impl Row for Song {
 
 impl Row for Show {
     // #[instrument(level = "trace", skip(self))]
-    fn get_column(&self, column_token: u32, dependency_type: DependencyType) -> DependencyValue {
+    fn get_column(&self, column_token: u32, dependency_type: &DependencyType) -> DependencyValue {
         match column_token {
             Database::SHOW_DATE_COLUMN => {
-                assert_eq!(dependency_type, DependencyType::Date);
+                assert_eq!(dependency_type, &DependencyType::Date);
                 DependencyValue::Date(self.date.clone())
             }
             Database::SHOW_ID_COLUMN => {
-                assert!(matches!(
-                    dependency_type,
-                    DependencyType::Id | DependencyType::ListOfIds
-                ));
+                assert_eq!(dependency_type, &DependencyType::Id);
                 DependencyValue::Id(Id::Uuid(self.id))
             }
             Database::SHOW_VENUE_ID_COLUMN => {
-                assert!(matches!(
-                    dependency_type,
-                    DependencyType::Id | DependencyType::ListOfIds
-                ));
+                assert_eq!(dependency_type, &DependencyType::Id);
                 DependencyValue::Id(Id::Uuid(self.venue_id))
             }
             _ => panic!("Unknown column token: {column_token}"),
@@ -304,24 +293,18 @@ impl Row for Show {
 
 impl Row for Set {
     // #[instrument(level = "trace", skip(self))]
-    fn get_column(&self, column_token: u32, dependency_type: DependencyType) -> DependencyValue {
+    fn get_column(&self, column_token: u32, dependency_type: &DependencyType) -> DependencyValue {
         match column_token {
             Database::SET_ID_COLUMN => {
-                assert!(matches!(
-                    dependency_type,
-                    DependencyType::Id | DependencyType::ListOfIds
-                ));
+                assert_eq!(dependency_type, &DependencyType::Id);
                 DependencyValue::Id(Id::Uuid(self.id))
             }
             Database::SET_SET_NAME_COLUMN => {
-                assert_eq!(dependency_type, DependencyType::String);
+                assert_eq!(dependency_type, &DependencyType::String);
                 DependencyValue::String(self.set_name.to_smolstr())
             }
             Database::SET_SHOW_ID_COLUMN => {
-                assert!(matches!(
-                    dependency_type,
-                    DependencyType::Id | DependencyType::ListOfIds
-                ));
+                assert_eq!(dependency_type, &DependencyType::Id);
                 DependencyValue::Id(Id::Uuid(self.show_id))
             }
             _ => panic!("Unknown column token: {column_token}"),
