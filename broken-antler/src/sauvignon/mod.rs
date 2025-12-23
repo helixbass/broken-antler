@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::sync::LazyLock;
 
 use async_trait::async_trait;
@@ -170,6 +171,10 @@ impl DatabaseInterface for Database {
             });
             &*COLUMN_TOKENS
         })
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 

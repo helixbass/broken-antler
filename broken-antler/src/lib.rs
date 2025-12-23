@@ -1,7 +1,7 @@
 use ::sauvignon::{
-    schema, CarverOrPopulator, DependencyValue, ExternalDependencyValues, Id,
-    InternalDependencyValues, PopulatorList, PopulatorListInterface, ResolveInternalDependencySync,
-    Schema, UnionOrInterfaceTypePopulatorList,
+    schema, CarverOrPopulator, DatabaseInterface, DependencyType, DependencyValue,
+    ExternalDependencyValues, Id, InternalDependencyValues, PopulatorList, PopulatorListInterface,
+    ResolveInternalDependencySync, Schema, UnionOrInterfaceTypePopulatorList,
 };
 use smol_str::SmolStr;
 use tracing::instrument;
@@ -20,47 +20,50 @@ struct SearchResultsResolver {}
 impl ResolveInternalDependencySync for SearchResultsResolver {
     fn resolve(
         &self,
-        external_dependency_values: &ExternalDependencyValues,
+        _external_dependency_values: &ExternalDependencyValues,
         preceding_internal_dependency_values: &InternalDependencyValues,
         database: &::sauvignon::Database,
     ) -> DependencyValue {
-        database
-            .as_any()
-            .downcast_ref::<Database>()
-            .unwrap()
-            .search_results(
-                preceding_internal_dependency_values
-                    .get("query")
-                    .unwrap()
-                    .as_string(),
-            )
-            .into_iter()
-            .map(|search_result| match search_result {
-                SearchResult::Venue(venue) => DependencyValue::Map(
-                    [
-                        ("type".into(), DependencyValue::String("Venue".into())),
-                        ("id".into(), DependencyValue::Id(Id::Uuid(venue.id))),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ),
-                SearchResult::Song(song) => DependencyValue::Map(
-                    [
-                        ("type".into(), DependencyValue::String("Song".into())),
-                        ("id".into(), DependencyValue::Id(Id::Uuid(song.id))),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ),
-                SearchResult::Show(show) => DependencyValue::Map(
-                    [
-                        ("type".into(), DependencyValue::String("Show".into())),
-                        ("id".into(), DependencyValue::Id(Id::Uuid(show.id))),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ),
-            })
+        DependencyValue::List(
+            database
+                .as_any()
+                .downcast_ref::<Database>()
+                .unwrap()
+                .search_results(
+                    preceding_internal_dependency_values
+                        .get("query")
+                        .unwrap()
+                        .as_string(),
+                )
+                .into_iter()
+                .map(|search_result| match search_result {
+                    SearchResult::Venue(venue) => DependencyValue::Map(
+                        [
+                            ("type".into(), DependencyValue::String("Venue".into())),
+                            ("id".into(), DependencyValue::Id(Id::Uuid(venue.id))),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                    SearchResult::Song(song) => DependencyValue::Map(
+                        [
+                            ("type".into(), DependencyValue::String("Song".into())),
+                            ("id".into(), DependencyValue::Id(Id::Uuid(song.id))),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                    SearchResult::Show(show) => DependencyValue::Map(
+                        [
+                            ("type".into(), DependencyValue::String("Show".into())),
+                            ("id".into(), DependencyValue::Id(Id::Uuid(show.id))),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                })
+                .collect(),
+        )
     }
 }
 
@@ -196,7 +199,7 @@ pub fn get_schema() -> Schema {
                                     "type".into(),
                                     DependencyType::String,
                                 ),
-                            ]
+                            ].into_iter().collect()
                         })))
                         resolver => Box::new(SearchResultsResolver::default())
                     )
