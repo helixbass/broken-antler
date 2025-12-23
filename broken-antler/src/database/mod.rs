@@ -225,6 +225,15 @@ impl Database {
                 Year::from_str(query_word).ok().map(|year| (index, year))
             })
             .collect::<SmallVec<[_; 4]>>();
+        let days = query_words
+            .iter()
+            .enumerate()
+            .filter_map(|(index, query_word)| {
+                DayOfMonth::from_str(query_word)
+                    .ok()
+                    .map(|day| (index, day))
+            })
+            .collect::<SmallVec<[_; 4]>>();
         unimplemented!()
     }
 }
@@ -309,6 +318,26 @@ impl FromStr for Year {
             return Err(());
         }
         Ok(Self(year))
+    }
+}
+
+struct DayOfMonth(u32);
+
+impl FromStr for DayOfMonth {
+    type Err = ();
+
+    fn from_str(str: &str) -> Result<Self, Self::Err> {
+        if !regex!(r#"^\d\d?$"#).is_match(str) {
+            return Err(());
+        }
+        let day = str.parse::<u32>().unwrap();
+        if day < 1 {
+            return Err(());
+        }
+        if day > 31 {
+            return Err(());
+        }
+        Ok(Self(day))
     }
 }
 
