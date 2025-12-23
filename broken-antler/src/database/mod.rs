@@ -9,11 +9,11 @@ use juriji::read_events;
 use regex::Regex;
 use shared::Event;
 use smallvec::SmallVec;
-use smol_str::StrExt;
+use smol_str::{SmolStr, StrExt};
 use sqlx::{Pool, Postgres};
 use squalid::{_d, regex};
 use tracing::instrument;
-use trie_rs::map::Trie;
+use trie_rs::map::{Trie, TrieBuilder};
 use uuid::Uuid;
 
 use crate::{Set, Show, Song, Venue};
@@ -204,7 +204,48 @@ impl DatabaseBuilder {
     }
 
     fn default_venue_and_song_words(&self) -> Trie<u8, Vec<Word>> {
-        unimplemented!()
+        let mut by_word: HashMap<SmolStr, Vec<Word>> = _d();
+        self.songs
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .for_each(|(song_index, song)| {
+                word_regex().split(&song.title).enumerate().for_each(
+                    |(song_word_index, song_word)| {
+                        by_word
+                            .entry(song_word.into())
+                            .or_default()
+                            .push(Word::Song {
+                                song_index,
+                                index: song_word_index,
+                            });
+                    },
+                );
+            });
+        self.venues
+            .as_ref()
+            .unwrap()
+            .into_iter()
+            .enumerate()
+            .for_each(|(venue_index, venue)| {
+                word_regex().split(&venue.name).enumerate().for_each(
+                    |(venue_word_index, venue_word)| {
+                        by_word
+                            .entry(venue_word.into())
+                            .or_default()
+                            .push(Word::Venue {
+                                venue_index,
+                                index: venue_word_index,
+                            });
+                    },
+                );
+            });
+        let mut trie_builder = TrieBuilder::default();
+        for (word, word_usages) in by_word {
+            trie_builder.push(word, word_usages);
+        }
+        trie_builder.build()
     }
 
     fn default_shows_by_month_day(
