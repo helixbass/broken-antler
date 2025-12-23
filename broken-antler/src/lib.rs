@@ -1,4 +1,8 @@
-use ::sauvignon::{schema, Schema};
+use ::sauvignon::{
+    schema, CarverOrPopulator, ExternalDependencyValues, InternalDependencyValues, PopulatorList,
+    PopulatorListInterface, Schema, UnionOrInterfaceTypePopulatorList,
+};
+use smol_str::SmolStr;
 use tracing::instrument;
 
 mod database;
@@ -6,6 +10,58 @@ mod sauvignon;
 
 pub use database::{get_database, Database, DatabaseCobbler, VenuesCobbler};
 pub use shared::{Event, Set, Show, Song, Venue};
+
+pub struct SearchResultsTypePopulator {}
+
+impl SearchResultsTypePopulator {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl UnionOrInterfaceTypePopulatorList for SearchResultsTypePopulator {
+    fn populate(
+        &self,
+        _external_dependencies: &ExternalDependencyValues,
+        internal_dependencies: &InternalDependencyValues,
+    ) -> Vec<SmolStr> {
+        internal_dependencies
+            .get("search_results")
+            .unwrap()
+            .as_list()
+            .into_iter()
+            .map(|search_result| search_result.as_map()["type"].as_string().clone())
+            .collect()
+    }
+}
+
+pub struct SearchResultsPopulator {}
+
+impl SearchResultsPopulator {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl PopulatorListInterface for SearchResultsPopulator {
+    fn populate(
+        &self,
+        _external_dependencies: &ExternalDependencyValues,
+        internal_dependencies: &InternalDependencyValues,
+    ) -> Vec<ExternalDependencyValues> {
+        internal_dependencies
+            .get("search_results")
+            .unwrap()
+            .as_list()
+            .into_iter()
+            .map(|search_result| {
+                [("id".into(), search_result.as_map()["id"].clone())]
+                    .into_iter()
+                    .collect()
+            })
+            .collect()
+    }
+}
 
 #[instrument(level = "trace")]
 pub fn get_schema() -> Schema {
@@ -70,16 +126,22 @@ pub fn get_schema() -> Schema {
                     ids => id_column_list()
                 ]
             }
-            // search => {
-            //     params => [
-            //         query => String!
-            //     ]
-            //     type => [SearchResult!]!
-            //     internal_dependencies => [
-            //         search_results => custom_sync(
-            //         )
-            //     ]
-            // }
+            search => {
+                params => [
+                    query => String!
+                ]
+                type => [SearchResult!]!
+                internal_dependencies => [
+                    search_results => custom_sync {
+                    }
+                ]
+                populator => custom {
+                    CarverOrPopulator::UnionOrInterfaceTypePopulatorList(
+                        Box::new(SearchResultsTypePopulator::new()),
+                        PopulatorList::Dyn(Box::new(SearchResultsPopulator::new())),
+                    )
+                }
+            }
         ]
         unions => [
             SearchResult => [Show, Song, Venue],
