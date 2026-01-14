@@ -2,7 +2,7 @@ use brunhilde::{Row, RowWithoutEventId};
 use rkyv::rancor;
 use smol_str::ToSmolStr;
 
-use crate::{Set, Show, Song, SongPerformance, Venue};
+use crate::{Set, Show, ShowRkyv, Song, SongPerformance, Venue};
 
 #[derive(Debug)]
 pub enum Event {
@@ -39,7 +39,9 @@ impl From<&Event> for RowWithoutEventId {
             Event::InsertShow(show) => RowWithoutEventId::new(
                 Some(show.id),
                 Event::INSERT_SHOW.to_smolstr(),
-                rkyv::to_bytes::<rancor::Error>(show).unwrap().into_vec(),
+                rkyv::to_bytes::<rancor::Error>(&ShowRkyv::from(show))
+                    .unwrap()
+                    .into_vec(),
             ),
             Event::InsertSet(set) => RowWithoutEventId::new(
                 Some(set.id),
@@ -66,9 +68,11 @@ impl From<&Row> for Event {
             Event::INSERT_SONG => {
                 Self::InsertSong(rkyv::from_bytes::<_, rancor::Error>(&value.payload).unwrap())
             }
-            Event::INSERT_SHOW => {
-                Self::InsertShow(rkyv::from_bytes::<_, rancor::Error>(&value.payload).unwrap())
-            }
+            Event::INSERT_SHOW => Self::InsertShow(
+                rkyv::from_bytes::<ShowRkyv, rancor::Error>(&value.payload)
+                    .unwrap()
+                    .into(),
+            ),
             Event::INSERT_SET => {
                 Self::InsertSet(rkyv::from_bytes::<_, rancor::Error>(&value.payload).unwrap())
             }

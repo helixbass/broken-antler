@@ -7,7 +7,7 @@ mod event;
 mod types;
 
 pub use event::Event;
-pub use types::{Set, SetName, Show, Song, SongPerformance, Venue};
+pub use types::{Set, SetName, Show, ShowRkyv, Song, SongPerformance, Venue};
 
 pub async fn connect_to_db() -> TcpStream {
     let database_url = env::var("DATABASE_URL").unwrap();
