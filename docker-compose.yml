@@ -1,19 +1,9 @@
 version: '3.5'
 
-volumes:
-  local_postgres_data: {}
-
 services:
-  postgres:
-    image: postgres:15
-    container_name: broken-antler-postgres
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-broken_antler}
-      POSTGRES_USER: ${POSTGRES_USER:-broken_antler}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
-    volumes:
-      - local_postgres_data:/var/lib/postgresql15/data
+  brunhilde:
+    image: helixbass/brunhilde:latest
+    container_name: broken-antler-brunhilde
     ports:
-      - "127.0.0.1:5432:5432"
+      - target: 8421
+        published: 8422
