@@ -211,17 +211,20 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "chrono",
  "derive_builder",
  "geoutils",
  "indexmap",
  "itertools 0.14.0",
  "juriji",
+ "regex",
  "sauvignon",
  "sauvignon-axum",
  "serde",
  "serde_json",
  "serde_json_path",
  "shared",
+ "smallvec",
  "smol_str",
  "sqlx",
  "squalid 0.0.1-dev.0 (git+https://github.com/helixbass/squalid?rev=646f6bf)",
@@ -231,6 +234,7 @@ dependencies = [
  "tracing",
  "tracing-chrome",
  "tracing-subscriber",
+ "trie-rs",
  "uuid",
 ]
 
@@ -411,6 +415,25 @@ name = "crc-catalog"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19d374276b40fb8bbdee95aef7c7fa6b5316ec764510eb64b8dd0e2ed0d7e7f5"
+
+[[package]]
+name = "crossbeam-deque"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9dd111b7b7f7d55b72c0a6ae361660ee5853c9af73f70c3c2ef6858b950e2e51"
+dependencies = [
+ "crossbeam-epoch",
+ "crossbeam-utils",
+]
+
+[[package]]
+name = "crossbeam-epoch"
+version = "0.9.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b82ac4a3c2ca9c3460964f020e1402edd5753411d7737aa39c3714ad1b5420e"
+dependencies = [
+ "crossbeam-utils",
+]
 
 [[package]]
 name = "crossbeam-queue"
@@ -597,6 +620,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
+name = "fid-rs"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6956a1e60e2d1412b44b4169d44a03dae518f8583d3e10090c912c105e48447"
+dependencies = [
+ "rayon",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -650,6 +682,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "futures"
+version = "0.3.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65bc07b1a8bc7c85c5f2e110c476c7389b4554ba72af57d8445ea63a576b0876"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "futures-executor",
+ "futures-io",
+ "futures-sink",
+ "futures-task",
+ "futures-util",
+]
+
+[[package]]
 name = "futures-channel"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -694,6 +741,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e5c1b78ca4aae1ac06c48a526a655760685149f0d465d21f37abfe57ce075c6"
 
 [[package]]
+name = "futures-macro"
+version = "0.3.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "162ee34ebcb7c64a8abebc059ce0fee27c2262618d7b60ed8faf72fef13c3650"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+]
+
+[[package]]
 name = "futures-sink"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -711,8 +769,10 @@ version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fa08315bb612088cc391249efdc3bc77536f16c91f6cf495e6fbe85b20a4a81"
 dependencies = [
+ "futures-channel",
  "futures-core",
  "futures-io",
+ "futures-macro",
  "futures-sink",
  "futures-task",
  "memchr",
@@ -1278,6 +1338,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
+name = "louds-rs"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "936de6c22f08e7135a921f8ada907acd0d88880c4f42b5591f634b9f1dd8e07f"
+dependencies = [
+ "fid-rs",
+]
+
+[[package]]
 name = "matchers"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1722,6 +1791,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "rayon"
+version = "1.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "368f01d005bf8fd9b1206fb6fa653e6c4a81ceb1466406b81792d87c5677a58f"
+dependencies = [
+ "either",
+ "rayon-core",
+]
+
+[[package]]
+name = "rayon-core"
+version = "1.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
+dependencies = [
+ "crossbeam-deque",
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1852,6 +1941,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "derive_builder",
+ "futures",
  "heck",
  "heck-smol-str",
  "illicit",
@@ -1865,10 +1955,11 @@ dependencies = [
  "sauvignon_shared",
  "serde",
  "serde_json",
+ "smallvec",
  "smol_str",
  "sql_query_builder",
  "sqlx",
- "squalid 0.0.1-dev.0 (git+https://github.com/helixbass/squalid?rev=646f6bf)",
+ "squalid 0.0.1-dev.0 (git+https://github.com/helixbass/squalid?rev=97ad97e)",
  "strum",
  "thiserror",
  "tokio",
@@ -2101,6 +2192,7 @@ dependencies = [
  "serde",
  "smol_str",
  "sqlx",
+ "strum",
  "tokio",
  "uuid",
 ]
@@ -2412,6 +2504,14 @@ dependencies = [
 [[package]]
 name = "squalid"
 version = "0.0.1-dev.0"
+source = "git+https://github.com/helixbass/squalid?rev=97ad97e#97ad97e8b72a611cd211cc7ace63cb16f22bacfb"
+dependencies = [
+ "itertools 0.11.0",
+]
+
+[[package]]
+name = "squalid"
+version = "0.0.1-dev.0"
 source = "git+https://github.com/helixbass/squalid?rev=aeb2045#aeb20458494a36d390192a8d89a086370527a8c1"
 dependencies = [
  "itertools 0.11.0",
@@ -2711,6 +2811,15 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "trie-rs"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6f88f4b0a1ebd6c3d16be3e45eb0e8089372ccadd88849b7ca162ba64b5e6f6"
+dependencies = [
+ "louds-rs",
 ]
 
 [[package]]
@@ -3104,6 +3213,7 @@ dependencies = [
  "chrono",
  "clap",
  "geoutils",
+ "indexmap",
  "itertools 0.14.0",
  "juriji",
  "regex",

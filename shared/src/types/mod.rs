@@ -23,3 +23,39 @@ pub struct Show {
     pub date: NaiveDate,
     pub venue_id: Uuid,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Set {
+    pub id: Uuid,
+    pub show_id: Uuid,
+    pub set_name: SetName,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Hash, strum::Display)]
+pub enum SetName {
+    #[serde(alias = "Set 1")]
+    Set1,
+    #[serde(alias = "Set 2")]
+    Set2,
+    #[serde(alias = "Set 3")]
+    Set3,
+    #[serde(alias = "Set 4")]
+    Set4,
+    Encore,
+    #[serde(alias = "Encore 2")]
+    Encore2,
+    #[serde(alias = "Encore 3")]
+    Encore3,
+    #[serde(alias = "Pre-Show")]
+    PreShow,
+    Soundcheck,
+    #[serde(alias = "Unknown Set")]
+    Unknown,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct SongPerformance {
+    pub id: Uuid,
+    pub set_id: Uuid,
+    pub song_id: Uuid,
+}

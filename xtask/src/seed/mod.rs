@@ -1,16 +1,21 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use chrono::NaiveDate;
 use geoutils::Location;
+use itertools::Itertools;
 use juriji::{insert_events, EventForInsertion};
 use serde::Deserialize;
-use shared::{get_db_pool, get_mutex_guard, Event, Show, Song, Venue};
+use shared::{
+    get_db_pool, get_mutex_guard, Event, Set, SetName, Show, Song, SongPerformance, Venue,
+};
 use sqlx::{Pool, Postgres};
 use tokio::fs::read_to_string;
 use uuid::Uuid;
 
-use crate::{parse_json_file, workspace_root_directory};
+use crate::{
+    get_show_original_ids, get_song_performances_by_set, parse_json_file, workspace_root_directory,
+    ShowJson, SongPerformanceJson,
+};
 
 pub async fn seed() -> anyhow::Result<()> {
     let db_pool = get_db_pool().await.unwrap();
@@ -18,7 +23,10 @@ pub async fn seed() -> anyhow::Result<()> {
     let venue_slugs = seed_venues(&db_pool).await?;
     seed_songs(&db_pool).await?;
     seed_shows(&db_pool, &venue_slugs).await?;
-    unimplemented!()
+    let sets = seed_sets(&db_pool).await?;
+    seed_song_performances(&sets, &db_pool).await?;
+
+    Ok(())
 }
 
 async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<HashMap<String, Uuid>> {
@@ -69,11 +77,7 @@ impl From<VenueJson> for Venue {
 }
 
 async fn seed_songs(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
-    let songs: Vec<Song> = parse_json_file::<Vec<Song>>("songs")
-        .await?
-        .into_iter()
-        .map(Into::into)
-        .collect();
+    let songs: Vec<Song> = parse_json_file("songs").await?;
     // println!("songs: {songs:#?}");
 
     insert_events(
@@ -98,6 +102,7 @@ async fn seed_shows(
         .into_iter()
         .map(|show| show.process(venue_slugs))
         .collect();
+
     // println!("shows: {shows:#?}");
 
     insert_events(
@@ -113,18 +118,6 @@ async fn seed_shows(
     Ok(())
 }
 
-#[derive(Deserialize)]
-struct ShowJson {
-    pub id: Uuid,
-    pub date: NaiveDate,
-    pub venue: VenueOnlySlug,
-}
-
-#[derive(Deserialize)]
-struct VenueOnlySlug {
-    pub slug: String,
-}
-
 impl ShowJson {
     pub fn process(self, venue_slugs: &HashMap<String, Uuid>) -> Show {
         Show {
@@ -133,6 +126,72 @@ impl ShowJson {
             venue_id: venue_slugs[&self.venue.slug],
         }
     }
+}
+
+async fn seed_sets(db_pool: &Pool<Postgres>) -> anyhow::Result<HashMap<(u32, SetName), Uuid>> {
+    let sets: Vec<Set> = parse_json_file("sets").await?;
+
+    let show_original_ids = get_show_original_ids()
+        .await?
+        .into_iter()
+        .map(|(original_id, id)| (id, original_id))
+        .collect::<HashMap<_, _>>();
+    let sets_map: HashMap<(u32, SetName), Uuid> = sets
+        .iter()
+        .map(|set| ((show_original_ids[&set.show_id], set.set_name), set.id))
+        .collect();
+
+    insert_events(
+        sets.into_iter()
+            .map(|set| Event::InsertSet(set))
+            .map(|event| EventForInsertion::from(&event)),
+        get_mutex_guard().await,
+        db_pool,
+    )
+    .await;
+
+    Ok(sets_map)
+}
+
+async fn seed_song_performances(
+    sets_map: &HashMap<(u32, SetName), Uuid>,
+    db_pool: &Pool<Postgres>,
+) -> anyhow::Result<()> {
+    let song_performances: Vec<SongPerformanceJson> = parse_json_file("tracks").await?;
+
+    let song_performances_by_set = get_song_performances_by_set(&song_performances);
+
+    for events in &song_performances_by_set
+        .iter()
+        .flat_map(|(show_original_id, sets)| {
+            sets.into_iter()
+                .flat_map(|(set_name, song_performances)| {
+                    song_performances
+                        .into_iter()
+                        .flat_map(|song_performance| {
+                            song_performance
+                                .songs
+                                .iter()
+                                .map(|song| {
+                                    Event::InsertSongPerformance(SongPerformance {
+                                        id: song_performance.id,
+                                        set_id: sets_map[&(*show_original_id, *set_name)],
+                                        song_id: song.id,
+                                    })
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
+        })
+        .map(|event| EventForInsertion::from(&event))
+        .chunks(1000)
+    {
+        insert_events(events, get_mutex_guard().await, db_pool).await;
+    }
+
+    Ok(())
 }
 
 fn sql_file_path(file_name_root: &str) -> PathBuf {

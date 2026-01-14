@@ -139,6 +139,219 @@ async fn test_shows() {
     .await;
 }
 
+#[tokio::test]
+async fn test_sets() {
+    request_test(
+        r#"
+            {
+              sets {
+                id
+                show {
+                  date
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.sets.*", response).len(), 5664);
+            assert_eq!(
+                _q("$.data.sets[0].id", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "3647fd47-03d8-4602-8ad1-dd0edc236658"
+            );
+            assert_eq!(
+                _q("$.data.sets[0].show.date", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "1984-12-01"
+            );
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_search_complete_song() {
+    request_test(
+        r#"
+            {
+              search(query: "Run like an antelope") {
+                ... on Song {
+                  title
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 1);
+            assert_eq!(
+                _q("$.data.search[0].title", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "Run Like an Antelope"
+            );
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_search_complete_venue() {
+    request_test(
+        r#"
+            {
+              search(query: "deer creek") {
+                ... on Venue {
+                  name
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 1);
+            assert_eq!(
+                _q("$.data.search[0].name", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "Deer Creek"
+            );
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_search_all_words_in_wrong_order() {
+    request_test(
+        r#"
+            {
+              search(query: "creek deer") {
+                ... on Venue {
+                  name
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 1);
+            assert_eq!(
+                _q("$.data.search[0].name", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "Deer Creek"
+            );
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_search_multiple_complete() {
+    request_test(
+        r#"
+            {
+              search(query: "Llama Cavern") {
+                ... on Song {
+                  title
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 2);
+            assert!(
+                _q("$.data.search[0].title", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    == "Llama"
+                    && _q("$.data.search[1].title", response)
+                        .exactly_one()
+                        .unwrap()
+                        .as_str()
+                        .unwrap()
+                        == "Cavern"
+                    || _q("$.data.search[0].title", response)
+                        .exactly_one()
+                        .unwrap()
+                        .as_str()
+                        .unwrap()
+                        == "Cavern"
+                        && _q("$.data.search[1].title", response)
+                            .exactly_one()
+                            .unwrap()
+                            .as_str()
+                            .unwrap()
+                            == "Llama"
+            );
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn test_search_show() {
+    request_test(
+        r#"
+            {
+              search(query: "Oct 21 1995") {
+                ... on Show {
+                  date
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 1);
+            assert_eq!(
+                _q("$.data.search[0].date", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "1995-10-21"
+            );
+        },
+    )
+    .await;
+
+    request_test(
+        r#"
+            {
+              search(query: "1995 10 21") {
+                ... on Show {
+                  date
+                }
+              }
+            }
+        "#,
+        |response| {
+            assert_eq!(_q("$.data.search.*", response).len(), 1);
+            assert_eq!(
+                _q("$.data.search[0].date", response)
+                    .exactly_one()
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+                "1995-10-21"
+            );
+        },
+    )
+    .await;
+}
+
 fn _q<'a>(query: &str, response: &'a serde_json::Value) -> NodeList<'a> {
     let path = JsonPath::parse(query).unwrap();
     path.query(response)

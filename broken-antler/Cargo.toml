@@ -6,16 +6,19 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 async-trait = "0.1.89"
+chrono = { workspace = true }
 derive_builder = "0.20.2"
 geoutils = { workspace = true }
-indexmap = "2.12.1"
+indexmap = { workspace = true }
 itertools = { workspace = true }
 juriji = { workspace = true }
+regex = "1.12.2"
 sauvignon = { path = "../../sauvignon" }
 sauvignon-axum = { path = "../../sauvignon/sauvignon-axum" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 shared = { path = "../shared" }
+smallvec = { workspace = true }
 smol_str = { workspace = true }
 sqlx = { workspace = true }
 squalid = { workspace = true }
@@ -25,6 +28,7 @@ tower = "0.5.2"
 tracing = { workspace = true }
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.22", features = [ "env-filter" ] }
+trie-rs = "0.4.2"
 uuid = { workspace = true }
 
 [dev-dependencies]

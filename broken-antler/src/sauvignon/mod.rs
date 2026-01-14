@@ -1,18 +1,25 @@
+use std::any::Any;
+use std::sync::LazyLock;
+
 use async_trait::async_trait;
-use sauvignon::{DependencyType, DependencyValue, Id, WhereResolved};
+use sauvignon::{
+    ColumnToken, ColumnTokens, DatabaseInterface, DependencyType, DependencyValue, Id,
+    WhereResolved,
+};
+use smol_str::ToSmolStr;
 use tracing::instrument;
 
-use crate::{Database, Show, Song, Venue};
+use crate::{Database, Set, Show, Song, Venue};
 
 #[async_trait]
-impl sauvignon::Database for Database {
+impl DatabaseInterface for Database {
     async fn get_column(
         &self,
         _table_name: &str,
         _column_name: &str,
         _id: &Id,
         _id_column_name: &str,
-        _dependency_type: DependencyType,
+        _dependency_type: &DependencyType,
     ) -> DependencyValue {
         unreachable!()
     }
@@ -21,7 +28,7 @@ impl sauvignon::Database for Database {
         &self,
         _table_name: &str,
         _column_name: &str,
-        _dependency_type: DependencyType,
+        _dependency_type: &DependencyType,
         _wheres: &[WhereResolved],
     ) -> Vec<DependencyValue> {
         unreachable!()
@@ -32,141 +39,280 @@ impl sauvignon::Database for Database {
     // #[instrument(level = "trace", skip(self))]
     fn get_column_sync(
         &self,
-        table_name: &str,
-        column_name: &str,
+        column_token: ColumnToken,
         id: &Id,
         id_column_name: &str,
-        dependency_type: DependencyType,
+        dependency_type: &DependencyType,
     ) -> DependencyValue {
         assert_eq!(id_column_name, "id");
         let id = id.as_uuid();
-        match table_name {
-            "venues" => self
+        match column_token.table {
+            Self::VENUES_TABLE => self
                 .venue_by_id(id)
-                .get_column(column_name, dependency_type),
-            "songs" => self.song_by_id(id).get_column(column_name, dependency_type),
-            "shows" => self.show_by_id(id).get_column(column_name, dependency_type),
-            table_name => panic!("Unknown table name {table_name}"),
+                .get_column(column_token.column, dependency_type),
+            Self::SONGS_TABLE => self
+                .song_by_id(id)
+                .get_column(column_token.column, dependency_type),
+            Self::SHOWS_TABLE => self
+                .show_by_id(id)
+                .get_column(column_token.column, dependency_type),
+            Self::SETS_TABLE => self
+                .set_by_id(id)
+                .get_column(column_token.column, dependency_type),
+            table_token => panic!("Unknown table token {table_token}"),
         }
     }
 
     // #[instrument(level = "trace", skip(self))]
     fn get_column_list_sync(
         &self,
-        table_name: &str,
-        column_name: &str,
-        dependency_type: DependencyType,
+        column_token: ColumnToken,
+        dependency_type: &DependencyType,
         wheres: &[WhereResolved],
     ) -> Vec<DependencyValue> {
-        match table_name {
-            "venues" => {
+        let dependency_type = dependency_type.as_list_inner();
+        match column_token.table {
+            Self::VENUES_TABLE => {
                 assert!(wheres.is_empty());
                 self.venues
                     .iter()
                     // .filter(|venue| venue.matches_wheres(wheres))
-                    .map(|venue| venue.get_column(column_name, dependency_type))
+                    .map(|venue| venue.get_column(column_token.column, dependency_type))
                     .collect()
             }
-            "songs" => {
+            Self::SONGS_TABLE => {
                 assert!(wheres.is_empty());
                 self.songs
                     .iter()
                     // .filter(|song| song.matches_wheres(wheres))
-                    .map(|song| song.get_column(column_name, dependency_type))
+                    .map(|song| song.get_column(column_token.column, dependency_type))
                     .collect()
             }
-            "shows" => match wheres.is_empty() {
+            Self::SHOWS_TABLE => match wheres.is_empty() {
                 true => self
                     .shows
                     .iter()
-                    .map(|show| show.get_column(column_name, dependency_type))
+                    .map(|show| show.get_column(column_token.column, dependency_type))
                     .collect(),
                 false => {
                     assert!(wheres.len() == 1 && wheres[0].column_name == "venue_id");
                     self.shows_by_venue_id[wheres[0].value.as_id().as_uuid()]
                         .iter()
                         .map(|show_index| {
-                            self.shows[*show_index].get_column(column_name, dependency_type)
+                            self.shows[*show_index].get_column(column_token.column, dependency_type)
                         })
                         .collect()
                 }
             },
-            table_name => panic!("Unknown table name {table_name}"),
+            Self::SETS_TABLE => {
+                assert!(wheres.is_empty());
+                self.sets
+                    .iter()
+                    // .filter(|set| set.matches_wheres(wheres))
+                    .map(|set| set.get_column(column_token.column, dependency_type))
+                    .collect()
+            }
+            table_token => panic!("Unknown table token {table_token}"),
         }
     }
 
     fn is_sync(&self) -> bool {
         true
     }
+
+    fn column_tokens(&self) -> Option<&'static ColumnTokens> {
+        Some({
+            static COLUMN_TOKENS: LazyLock<ColumnTokens> = LazyLock::new(|| {
+                [
+                    (
+                        "venues".to_smolstr(),
+                        [
+                            ("id".to_smolstr(), Database::VENUE_ID_COLUMN_TOKEN),
+                            ("name".to_smolstr(), Database::VENUE_NAME_COLUMN_TOKEN),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                    (
+                        "songs".to_smolstr(),
+                        [
+                            ("id".to_smolstr(), Database::SONG_ID_COLUMN_TOKEN),
+                            ("title".to_smolstr(), Database::SONG_TITLE_COLUMN_TOKEN),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                    (
+                        "shows".to_smolstr(),
+                        [
+                            ("id".to_smolstr(), Database::SHOW_ID_COLUMN_TOKEN),
+                            ("date".to_smolstr(), Database::SHOW_DATE_COLUMN_TOKEN),
+                            (
+                                "venue_id".to_smolstr(),
+                                Database::SHOW_VENUE_ID_COLUMN_TOKEN,
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                    (
+                        "sets".to_smolstr(),
+                        [
+                            ("id".to_smolstr(), Database::SET_ID_COLUMN_TOKEN),
+                            ("set_name".to_smolstr(), Database::SET_SET_NAME_COLUMN_TOKEN),
+                            ("show_id".to_smolstr(), Database::SET_SHOW_ID_COLUMN_TOKEN),
+                        ]
+                        .into_iter()
+                        .collect(),
+                    ),
+                ]
+                .into_iter()
+                .collect()
+            });
+            &*COLUMN_TOKENS
+        })
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+impl Database {
+    const VENUES_TABLE: u32 = 0;
+    const SONGS_TABLE: u32 = 1;
+    const SHOWS_TABLE: u32 = 2;
+    const SETS_TABLE: u32 = 3;
+
+    const VENUE_ID_COLUMN: u32 = 0;
+    const VENUE_NAME_COLUMN: u32 = 1;
+    const SONG_ID_COLUMN: u32 = 2;
+    const SONG_TITLE_COLUMN: u32 = 3;
+    const SHOW_ID_COLUMN: u32 = 4;
+    const SHOW_DATE_COLUMN: u32 = 5;
+    const SHOW_VENUE_ID_COLUMN: u32 = 6;
+    const SET_ID_COLUMN: u32 = 7;
+    const SET_SET_NAME_COLUMN: u32 = 8;
+    const SET_SHOW_ID_COLUMN: u32 = 9;
+
+    const VENUE_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::VENUES_TABLE,
+        column: Self::VENUE_ID_COLUMN,
+    };
+    const VENUE_NAME_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::VENUES_TABLE,
+        column: Self::VENUE_NAME_COLUMN,
+    };
+    const SONG_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SONGS_TABLE,
+        column: Self::SONG_ID_COLUMN,
+    };
+    const SONG_TITLE_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SONGS_TABLE,
+        column: Self::SONG_TITLE_COLUMN,
+    };
+    const SHOW_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SHOWS_TABLE,
+        column: Self::SHOW_ID_COLUMN,
+    };
+    const SHOW_DATE_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SHOWS_TABLE,
+        column: Self::SHOW_DATE_COLUMN,
+    };
+    const SHOW_VENUE_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SHOWS_TABLE,
+        column: Self::SHOW_VENUE_ID_COLUMN,
+    };
+    const SET_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SETS_TABLE,
+        column: Self::SET_ID_COLUMN,
+    };
+    const SET_SET_NAME_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SETS_TABLE,
+        column: Self::SET_SET_NAME_COLUMN,
+    };
+    const SET_SHOW_ID_COLUMN_TOKEN: ColumnToken = ColumnToken {
+        table: Self::SETS_TABLE,
+        column: Self::SET_SHOW_ID_COLUMN,
+    };
 }
 
 trait Row {
-    fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue;
+    fn get_column(&self, column_token: u32, dependency_type: &DependencyType) -> DependencyValue;
 }
 
 impl Row for Venue {
     // #[instrument(level = "trace", skip(self))]
-    fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
-        match column_name {
-            "name" => {
-                assert_eq!(dependency_type, DependencyType::String);
+    fn get_column(&self, column_token: u32, dependency_type: &DependencyType) -> DependencyValue {
+        match column_token {
+            Database::VENUE_NAME_COLUMN => {
+                assert_eq!(dependency_type, &DependencyType::String);
                 DependencyValue::String(self.name.clone())
             }
-            "id" => {
-                assert!(matches!(
-                    dependency_type,
-                    DependencyType::Id | DependencyType::ListOfIds
-                ));
+            Database::VENUE_ID_COLUMN => {
+                assert_eq!(dependency_type, &DependencyType::Id);
                 DependencyValue::Id(Id::Uuid(self.id))
             }
-            _ => panic!("Unknown column: {column_name}"),
+            _ => panic!("Unknown column token: {column_token}"),
         }
     }
 }
 
 impl Row for Song {
     // #[instrument(level = "trace", skip(self))]
-    fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
-        match column_name {
-            "title" => {
-                assert_eq!(dependency_type, DependencyType::String);
+    fn get_column(&self, column_token: u32, dependency_type: &DependencyType) -> DependencyValue {
+        match column_token {
+            Database::SONG_TITLE_COLUMN => {
+                assert_eq!(dependency_type, &DependencyType::String);
                 DependencyValue::String(self.title.clone())
             }
-            "id" => {
-                assert!(matches!(
-                    dependency_type,
-                    DependencyType::Id | DependencyType::ListOfIds
-                ));
+            Database::SONG_ID_COLUMN => {
+                assert_eq!(dependency_type, &DependencyType::Id);
                 DependencyValue::Id(Id::Uuid(self.id))
             }
-            _ => panic!("Unknown column: {column_name}"),
+            _ => panic!("Unknown column token: {column_token}"),
         }
     }
 }
 
 impl Row for Show {
     // #[instrument(level = "trace", skip(self))]
-    fn get_column(&self, column_name: &str, dependency_type: DependencyType) -> DependencyValue {
-        match column_name {
-            "date" => {
-                assert_eq!(dependency_type, DependencyType::Date);
+    fn get_column(&self, column_token: u32, dependency_type: &DependencyType) -> DependencyValue {
+        match column_token {
+            Database::SHOW_DATE_COLUMN => {
+                assert_eq!(dependency_type, &DependencyType::Date);
                 DependencyValue::Date(self.date.clone())
             }
-            "id" => {
-                assert!(matches!(
-                    dependency_type,
-                    DependencyType::Id | DependencyType::ListOfIds
-                ));
+            Database::SHOW_ID_COLUMN => {
+                assert_eq!(dependency_type, &DependencyType::Id);
                 DependencyValue::Id(Id::Uuid(self.id))
             }
-            "venue_id" => {
-                assert!(matches!(
-                    dependency_type,
-                    DependencyType::Id | DependencyType::ListOfIds
-                ));
+            Database::SHOW_VENUE_ID_COLUMN => {
+                assert_eq!(dependency_type, &DependencyType::Id);
                 DependencyValue::Id(Id::Uuid(self.venue_id))
             }
-            _ => panic!("Unknown column: {column_name}"),
+            _ => panic!("Unknown column token: {column_token}"),
+        }
+    }
+}
+
+impl Row for Set {
+    // #[instrument(level = "trace", skip(self))]
+    fn get_column(&self, column_token: u32, dependency_type: &DependencyType) -> DependencyValue {
+        match column_token {
+            Database::SET_ID_COLUMN => {
+                assert_eq!(dependency_type, &DependencyType::Id);
+                DependencyValue::Id(Id::Uuid(self.id))
+            }
+            Database::SET_SET_NAME_COLUMN => {
+                assert_eq!(dependency_type, &DependencyType::String);
+                DependencyValue::String(self.set_name.to_smolstr())
+            }
+            Database::SET_SHOW_ID_COLUMN => {
+                assert_eq!(dependency_type, &DependencyType::Id);
+                DependencyValue::Id(Id::Uuid(self.show_id))
+            }
+            _ => panic!("Unknown column token: {column_token}"),
         }
     }
 }
@@ -210,6 +356,16 @@ impl MatchWheres for Show {
                 }
                 _ => unimplemented!(),
             }
+        }
+        true
+    }
+}
+
+impl MatchWheres for Set {
+    #[instrument(level = "trace", skip(self))]
+    fn matches_wheres(&self, wheres: &[WhereResolved]) -> bool {
+        for _where in wheres {
+            unimplemented!()
         }
         true
     }
