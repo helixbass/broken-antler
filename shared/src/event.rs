@@ -1,4 +1,6 @@
+use brunhilde::RowWithoutEventId;
 use juriji::{from_json_str_with_id, to_serde_json_value_without_id, EventForInsertion, ReadEvent};
+use smol_str::ToSmolStr;
 
 use crate::{Set, Show, Song, SongPerformance, Venue};
 
@@ -21,12 +23,12 @@ impl Event {
     const INSERT_SONG_PERFORMANCE: &'static str = "INSERT_SONG_PERFORMANCE";
 }
 
-impl From<&Event> for EventForInsertion {
+impl From<&Event> for RowWithoutEventId {
     fn from(value: &Event) -> Self {
         match value {
-            Event::InsertVenue(venue) => EventForInsertion::new(
+            Event::InsertVenue(venue) => RowWithoutEventId::new(
                 Some(venue.id),
-                Event::INSERT_VENUE.to_owned(),
+                Event::INSERT_VENUE.to_smolstr(),
                 to_serde_json_value_without_id(venue),
             ),
             Event::InsertSong(song) => EventForInsertion::new(
