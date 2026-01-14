@@ -41,6 +41,7 @@ pub struct Set {
     Deserialize,
     Serialize,
     serde::Deserialize,
+    serde::Serialize,
     Hash,
     strum::Display,
 )]

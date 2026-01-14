@@ -2,20 +2,19 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::FromStr;
 
+use brunhilde::{client, Request, Row, RowsRequest};
 use chrono::Datelike;
 use derive_builder::Builder;
 use itertools::Itertools;
-use juriji::read_events;
-use shared::Event;
 use smallvec::SmallVec;
 use smol_str::{SmolStr, StrExt};
-use sqlx::{Pool, Postgres};
 use squalid::{_d, regex, EverythingExt};
 use tracing::instrument;
 use trie_rs::map::{Trie, TrieBuilder};
 use uuid::Uuid;
 
 use crate::{Set, Show, Song, Venue};
+use shared::{connect_to_db, table_id, Event};
 
 #[derive(Default)]
 pub struct VenuesCobbler {
@@ -714,10 +713,10 @@ impl From<DatabaseCobbler> for Database {
     }
 }
 
-#[instrument(level = "trace", skip(db_pool))]
-pub async fn get_database(db_pool: &Pool<Postgres>) -> sauvignon::Database {
+#[instrument(level = "trace")]
+pub async fn get_database() -> sauvignon::Database {
     let mut cobbler = DatabaseCobbler::default();
-    read_events(None, db_pool)
+    read_events()
         .await
         .into_iter()
         .map(|event| Event::from(&event))
@@ -725,4 +724,15 @@ pub async fn get_database(db_pool: &Pool<Postgres>) -> sauvignon::Database {
             cobbler.accept_next(&event);
         });
     sauvignon::Database::Dyn(Box::new(Database::from(cobbler)))
+}
+
+async fn read_events() -> Vec<Row> {
+    let tcp_stream = connect_to_db().await;
+    client::request(
+        Request::from(RowsRequest::new(table_id())).into(),
+        tcp_stream,
+    )
+    .await
+    .into_rows()
+    .rows
 }
