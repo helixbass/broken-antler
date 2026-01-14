@@ -9,7 +9,7 @@ resolver = "3"
 [workspace.dependencies]
 anyhow = "1.0.100"
 brunhilde = { path = "../brunhilde" }
-chrono = { version = "0.4.42", features = [ "serde" ] }
+chrono = { git = "https://github.com/Zk2u/chrono", rev = "f7430fc", features = [ "serde", "rkyv-32", "rkyv-validation" ] }
 geoutils = { git = "https://github.com/helixbass/geoutils", rev = "4dfde485", features = [ "rkyv", "serde" ] }
 indexmap = "2.12.1"
 itertools = "0.14.0"

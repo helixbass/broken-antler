@@ -1,5 +1,4 @@
 use brunhilde::{Row, RowWithoutEventId};
-use juriji::{from_json_str_with_id, to_serde_json_value_without_id, EventForInsertion, ReadEvent};
 use rkyv::rancor;
 use smol_str::ToSmolStr;
 
@@ -32,24 +31,24 @@ impl From<&Event> for RowWithoutEventId {
                 Event::INSERT_VENUE.to_smolstr(),
                 rkyv::to_bytes::<rancor::Error>(venue).unwrap().into_vec(),
             ),
-            Event::InsertSong(song) => EventForInsertion::new(
+            Event::InsertSong(song) => RowWithoutEventId::new(
                 Some(song.id),
-                Event::INSERT_SONG.to_owned(),
+                Event::INSERT_SONG.to_smolstr(),
                 rkyv::to_bytes::<rancor::Error>(song).unwrap().into_vec(),
             ),
-            Event::InsertShow(show) => EventForInsertion::new(
+            Event::InsertShow(show) => RowWithoutEventId::new(
                 Some(show.id),
-                Event::INSERT_SHOW.to_owned(),
+                Event::INSERT_SHOW.to_smolstr(),
                 rkyv::to_bytes::<rancor::Error>(show).unwrap().into_vec(),
             ),
-            Event::InsertSet(set) => EventForInsertion::new(
+            Event::InsertSet(set) => RowWithoutEventId::new(
                 Some(set.id),
-                Event::INSERT_SET.to_owned(),
+                Event::INSERT_SET.to_smolstr(),
                 rkyv::to_bytes::<rancor::Error>(set).unwrap().into_vec(),
             ),
-            Event::InsertSongPerformance(song_performance) => EventForInsertion::new(
+            Event::InsertSongPerformance(song_performance) => RowWithoutEventId::new(
                 Some(song_performance.id),
-                Event::INSERT_SONG_PERFORMANCE.to_owned(),
+                Event::INSERT_SONG_PERFORMANCE.to_smolstr(),
                 rkyv::to_bytes::<rancor::Error>(song_performance)
                     .unwrap()
                     .into_vec(),
