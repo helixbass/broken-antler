@@ -24,7 +24,7 @@ pub struct Show {
     pub venue_id: Uuid,
 }
 
-#[derive(Clone, Debug, Archive, Deserialize, Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Archive, Deserialize, Serialize, serde::Deserialize, serde::Serialize)]
 pub struct Set {
     pub id: Uuid,
     pub show_id: Uuid,
