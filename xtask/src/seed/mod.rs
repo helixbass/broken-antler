@@ -1,34 +1,29 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
 
+use brunhilde::{client, tcp, AppendRows, Request, RowWithoutEventId};
 use geoutils::Location;
 use itertools::Itertools;
 use serde::Deserialize;
-use shared::{
-    get_db_pool, get_mutex_guard, Event, Set, SetName, Show, Song, SongPerformance, Venue,
-};
-use sqlx::{Pool, Postgres};
-use tokio::fs::read_to_string;
+use shared::{connect_to_db, table_id, Event, Set, SetName, Show, Song, SongPerformance, Venue};
 use uuid::Uuid;
 
 use crate::{
-    get_show_original_ids, get_song_performances_by_set, parse_json_file, workspace_root_directory,
-    ShowJson, SongPerformanceJson,
+    get_show_original_ids, get_song_performances_by_set, parse_json_file, ShowJson,
+    SongPerformanceJson,
 };
 
 pub async fn seed() -> anyhow::Result<()> {
-    let db_pool = get_db_pool().await.unwrap();
-    create_tables(&db_pool).await?;
-    let venue_slugs = seed_venues(&db_pool).await?;
-    seed_songs(&db_pool).await?;
-    seed_shows(&db_pool, &venue_slugs).await?;
-    let sets = seed_sets(&db_pool).await?;
-    seed_song_performances(&sets, &db_pool).await?;
+    create_tables().await;
+    let venue_slugs = seed_venues().await?;
+    seed_songs().await?;
+    seed_shows(&venue_slugs).await?;
+    let sets = seed_sets().await?;
+    seed_song_performances(&sets).await?;
 
     Ok(())
 }
 
-async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<HashMap<String, Uuid>> {
+async fn seed_venues() -> anyhow::Result<HashMap<String, Uuid>> {
     let venues_json: Vec<VenueJson> = parse_json_file("venues").await?;
 
     let venue_slugs: HashMap<_, _> = venues_json
@@ -39,13 +34,7 @@ async fn seed_venues(db_pool: &Pool<Postgres>) -> anyhow::Result<HashMap<String,
     let venues: Vec<Venue> = venues_json.into_iter().map(Into::into).collect();
     // println!("venues: {venues:#?}");
 
-    insert_events(
-        venues
-            .into_iter()
-            .map(|venue| Event::InsertVenue(venue))
-            .map(|event| EventForInsertion::from(&event)),
-    )
-    .await;
+    insert_events(venues.into_iter().map(|venue| Event::InsertVenue(venue))).await;
 
     Ok(venue_slugs)
 }
@@ -73,27 +62,16 @@ impl From<VenueJson> for Venue {
     }
 }
 
-async fn seed_songs(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
+async fn seed_songs() -> anyhow::Result<()> {
     let songs: Vec<Song> = parse_json_file("songs").await?;
     // println!("songs: {songs:#?}");
 
-    insert_events(
-        songs
-            .into_iter()
-            .map(|song| Event::InsertSong(song))
-            .map(|event| EventForInsertion::from(&event)),
-        get_mutex_guard().await,
-        db_pool,
-    )
-    .await;
+    insert_events(songs.into_iter().map(|song| Event::InsertSong(song))).await;
 
     Ok(())
 }
 
-async fn seed_shows(
-    db_pool: &Pool<Postgres>,
-    venue_slugs: &HashMap<String, Uuid>,
-) -> anyhow::Result<()> {
+async fn seed_shows(venue_slugs: &HashMap<String, Uuid>) -> anyhow::Result<()> {
     let shows: Vec<Show> = parse_json_file::<Vec<ShowJson>>("shows")
         .await?
         .into_iter()
@@ -102,15 +80,7 @@ async fn seed_shows(
 
     // println!("shows: {shows:#?}");
 
-    insert_events(
-        shows
-            .into_iter()
-            .map(|show| Event::InsertShow(show))
-            .map(|event| EventForInsertion::from(&event)),
-        get_mutex_guard().await,
-        db_pool,
-    )
-    .await;
+    insert_events(shows.into_iter().map(|show| Event::InsertShow(show))).await;
 
     Ok(())
 }
@@ -125,7 +95,7 @@ impl ShowJson {
     }
 }
 
-async fn seed_sets(db_pool: &Pool<Postgres>) -> anyhow::Result<HashMap<(u32, SetName), Uuid>> {
+async fn seed_sets() -> anyhow::Result<HashMap<(u32, SetName), Uuid>> {
     let sets: Vec<Set> = parse_json_file("sets").await?;
 
     let show_original_ids = get_show_original_ids()
@@ -138,22 +108,12 @@ async fn seed_sets(db_pool: &Pool<Postgres>) -> anyhow::Result<HashMap<(u32, Set
         .map(|set| ((show_original_ids[&set.show_id], set.set_name), set.id))
         .collect();
 
-    insert_events(
-        sets.into_iter()
-            .map(|set| Event::InsertSet(set))
-            .map(|event| EventForInsertion::from(&event)),
-        get_mutex_guard().await,
-        db_pool,
-    )
-    .await;
+    insert_events(sets.into_iter().map(|set| Event::InsertSet(set))).await;
 
     Ok(sets_map)
 }
 
-async fn seed_song_performances(
-    sets_map: &HashMap<(u32, SetName), Uuid>,
-    db_pool: &Pool<Postgres>,
-) -> anyhow::Result<()> {
+async fn seed_song_performances(sets_map: &HashMap<(u32, SetName), Uuid>) -> anyhow::Result<()> {
     let song_performances: Vec<SongPerformanceJson> = parse_json_file("tracks").await?;
 
     let song_performances_by_set = get_song_performances_by_set(&song_performances);
@@ -182,25 +142,34 @@ async fn seed_song_performances(
                 })
                 .collect::<Vec<_>>()
         })
-        .map(|event| EventForInsertion::from(&event))
         .chunks(1000)
     {
-        insert_events(events, get_mutex_guard().await, db_pool).await;
+        insert_events(events).await;
     }
 
     Ok(())
 }
 
-fn sql_file_path(file_name_root: &str) -> PathBuf {
-    let mut path = workspace_root_directory();
-    path.push(&format!("sql/{file_name_root}.sql"));
-    path
+async fn create_tables() {
+    let tcp_stream = connect_to_db().await;
+    client::request(tcp::Request::CreateTable(table_id()), tcp_stream)
+        .await
+        .as_create_table();
 }
 
-async fn create_tables(db_pool: &Pool<Postgres>) -> anyhow::Result<()> {
-    let sql = read_to_string(sql_file_path("create_tables")).await?;
-    for command in sql.split("\n\n") {
-        sqlx::query(command).execute(db_pool).await?;
-    }
-    Ok(())
+async fn insert_events(events: impl IntoIterator<Item = Event>) {
+    let tcp_stream = connect_to_db().await;
+    client::request(
+        Request::from(AppendRows::new(
+            table_id(),
+            events
+                .into_iter()
+                .map(|event| RowWithoutEventId::from(&event))
+                .collect(),
+        ))
+        .into(),
+        tcp_stream,
+    )
+    .await
+    .as_append_rows();
 }
