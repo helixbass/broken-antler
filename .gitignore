@@ -2,3 +2,5 @@
 
 trace-*.json
 profile*.json.gz
+
+.envrc
