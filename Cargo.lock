@@ -816,7 +816,7 @@ dependencies = [
 [[package]]
 name = "geoutils"
 version = "0.5.1"
-source = "git+https://github.com/helixbass/geoutils?rev=4dfde485#4dfde4855009a045949d1f8e37c98b08d3bd942f"
+source = "git+https://github.com/helixbass/geoutils?rev=524e732#524e73223104812159d79ffc779d7cb4cbfdf627"
 dependencies = [
  "rkyv",
  "serde",
