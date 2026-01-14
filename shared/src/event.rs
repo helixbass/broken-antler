@@ -1,6 +1,8 @@
-use juriji::{from_json_str_with_id, to_serde_json_value_without_id, EventForInsertion, ReadEvent};
+use brunhilde::{Row, RowWithoutEventId};
+use rkyv::rancor;
+use smol_str::ToSmolStr;
 
-use crate::{Set, Show, Song, SongPerformance, Venue};
+use crate::{Set, Show, ShowRkyv, Song, SongPerformance, Venue};
 
 #[derive(Debug)]
 pub enum Event {
@@ -21,57 +23,62 @@ impl Event {
     const INSERT_SONG_PERFORMANCE: &'static str = "INSERT_SONG_PERFORMANCE";
 }
 
-impl From<&Event> for EventForInsertion {
+impl From<&Event> for RowWithoutEventId {
     fn from(value: &Event) -> Self {
         match value {
-            Event::InsertVenue(venue) => EventForInsertion::new(
+            Event::InsertVenue(venue) => RowWithoutEventId::new(
                 Some(venue.id),
-                Event::INSERT_VENUE.to_owned(),
-                to_serde_json_value_without_id(venue),
+                Event::INSERT_VENUE.to_smolstr(),
+                rkyv::to_bytes::<rancor::Error>(venue).unwrap().into_vec(),
             ),
-            Event::InsertSong(song) => EventForInsertion::new(
+            Event::InsertSong(song) => RowWithoutEventId::new(
                 Some(song.id),
-                Event::INSERT_SONG.to_owned(),
-                to_serde_json_value_without_id(song),
+                Event::INSERT_SONG.to_smolstr(),
+                rkyv::to_bytes::<rancor::Error>(song).unwrap().into_vec(),
             ),
-            Event::InsertShow(show) => EventForInsertion::new(
+            Event::InsertShow(show) => RowWithoutEventId::new(
                 Some(show.id),
-                Event::INSERT_SHOW.to_owned(),
-                to_serde_json_value_without_id(show),
+                Event::INSERT_SHOW.to_smolstr(),
+                rkyv::to_bytes::<rancor::Error>(&ShowRkyv::from(show))
+                    .unwrap()
+                    .into_vec(),
             ),
-            Event::InsertSet(set) => EventForInsertion::new(
+            Event::InsertSet(set) => RowWithoutEventId::new(
                 Some(set.id),
-                Event::INSERT_SET.to_owned(),
-                to_serde_json_value_without_id(set),
+                Event::INSERT_SET.to_smolstr(),
+                rkyv::to_bytes::<rancor::Error>(set).unwrap().into_vec(),
             ),
-            Event::InsertSongPerformance(song_performance) => EventForInsertion::new(
+            Event::InsertSongPerformance(song_performance) => RowWithoutEventId::new(
                 Some(song_performance.id),
-                Event::INSERT_SONG_PERFORMANCE.to_owned(),
-                to_serde_json_value_without_id(song_performance),
+                Event::INSERT_SONG_PERFORMANCE.to_smolstr(),
+                rkyv::to_bytes::<rancor::Error>(song_performance)
+                    .unwrap()
+                    .into_vec(),
             ),
         }
     }
 }
 
-impl From<&ReadEvent> for Event {
-    fn from(value: &ReadEvent) -> Self {
+impl From<&Row> for Event {
+    fn from(value: &Row) -> Self {
         match &*value.type_ {
             Event::INSERT_VENUE => {
-                Self::InsertVenue(from_json_str_with_id(&value.payload, value.id.unwrap()))
+                Self::InsertVenue(rkyv::from_bytes::<_, rancor::Error>(&value.payload).unwrap())
             }
             Event::INSERT_SONG => {
-                Self::InsertSong(from_json_str_with_id(&value.payload, value.id.unwrap()))
+                Self::InsertSong(rkyv::from_bytes::<_, rancor::Error>(&value.payload).unwrap())
             }
-            Event::INSERT_SHOW => {
-                Self::InsertShow(from_json_str_with_id(&value.payload, value.id.unwrap()))
-            }
+            Event::INSERT_SHOW => Self::InsertShow(
+                rkyv::from_bytes::<ShowRkyv, rancor::Error>(&value.payload)
+                    .unwrap()
+                    .into(),
+            ),
             Event::INSERT_SET => {
-                Self::InsertSet(from_json_str_with_id(&value.payload, value.id.unwrap()))
+                Self::InsertSet(rkyv::from_bytes::<_, rancor::Error>(&value.payload).unwrap())
             }
-            Event::INSERT_SONG_PERFORMANCE => Self::InsertSongPerformance(from_json_str_with_id(
-                &value.payload,
-                value.id.unwrap(),
-            )),
+            Event::INSERT_SONG_PERFORMANCE => Self::InsertSongPerformance(
+                rkyv::from_bytes::<_, rancor::Error>(&value.payload).unwrap(),
+            ),
             type_ => panic!("Unknown event type: {type_}"),
         }
     }

@@ -1,25 +1,19 @@
-use std::sync::LazyLock;
+use std::env;
 
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::net::TcpStream;
+use uuid::Uuid;
 
 mod event;
 mod types;
 
 pub use event::Event;
-pub use types::{Set, SetName, Show, Song, SongPerformance, Venue};
+pub use types::{Set, SetName, Show, ShowRkyv, Song, SongPerformance, Venue};
 
-pub async fn get_db_pool() -> anyhow::Result<Pool<Postgres>> {
-    let db_pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect("postgres://broken_antler:password@localhost/broken_antler")
-        .await?;
-
-    Ok(db_pool)
+pub async fn connect_to_db() -> TcpStream {
+    let database_url = env::var("DATABASE_URL").unwrap();
+    TcpStream::connect(&database_url).await.unwrap()
 }
 
-static GUARD_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
-
-pub async fn get_mutex_guard() -> MutexGuard<'static, ()> {
-    GUARD_MUTEX.lock().await
+pub fn table_id() -> Uuid {
+    Uuid::parse_str(&env::var("DATABASE_TABLE").unwrap()).unwrap()
 }

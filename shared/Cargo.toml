@@ -5,12 +5,12 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
+brunhilde = { workspace = true }
 chrono = { workspace = true }
 geoutils = { workspace = true }
-juriji = { workspace = true }
+rkyv = { workspace = true }
 serde = { workspace = true }
 smol_str = { workspace = true, features = [ "serde" ] }
-sqlx = { workspace = true }
 strum = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
